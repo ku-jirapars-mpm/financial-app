@@ -160,3 +160,21 @@ export const snapshotRebuildSchema = z.object({ snapshotId: uuid, reason });
 export const periodSchema = z
   .object({ from: isoDate, to: isoDate })
   .refine((p) => p.from <= p.to, "Start must be on or before end");
+
+export const subscriptionSchema = z.object({
+  name: trimmed(200).min(1, "Name is required"),
+  counterparty: optionalText(100),
+  amount: positiveBaht,
+  accountId: uuid,
+  categoryId: optionalUuid,
+  frequency: z.enum(["weekly", "monthly", "yearly"]),
+  intervalCount: z.coerce.number().int().min(1).max(52).default(1),
+  nextDate: isoDate,
+});
+
+export const subscriptionChargeSchema = z.object({
+  id: uuid,
+  dueDate: isoDate,
+  amount: positiveBaht,
+  date: isoDate,
+});

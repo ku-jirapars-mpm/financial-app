@@ -73,6 +73,7 @@ export const DEFAULT_CATEGORIES: { name: string; kind: "income" | "expense" }[] 
   { name: "Insurance", kind: "expense" },
   { name: "Shopping", kind: "expense" },
   { name: "Entertainment", kind: "expense" },
+  { name: "Subscriptions", kind: "expense" },
   { name: "Education", kind: "expense" },
   { name: "Family", kind: "expense" },
   { name: "Bank fees & interest", kind: "expense" },

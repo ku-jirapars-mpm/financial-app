@@ -85,3 +85,24 @@ export function addDays(date: string, n: number): string {
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 }
+
+export type Frequency = "weekly" | "monthly" | "yearly";
+
+/**
+ * The k-th occurrence of a schedule anchored at `start` (k = 0 is `start`).
+ * Monthly/yearly keep the anchor's day of month, clamped to short months
+ * (Jan 31 → Feb 28 → Mar 31), so dates never drift.
+ */
+export function nthOccurrence(start: string, frequency: Frequency, interval: number, k: number): string {
+  if (frequency === "weekly") return addDays(start, 7 * interval * k);
+  return addMonths(start, (frequency === "yearly" ? 12 : 1) * interval * k);
+}
+
+/** First occurrence strictly after `date`. */
+export function occurrenceAfter(start: string, frequency: Frequency, interval: number, date: string): string {
+  for (let k = 0; k < 10_000; k++) {
+    const d = nthOccurrence(start, frequency, interval, k);
+    if (d > date) return d;
+  }
+  throw new RangeError("schedule too long");
+}

@@ -15,7 +15,15 @@ import {
 import { createCategory, setCategoryArchived } from "@/lib/server/categories";
 import { toUserMessage } from "@/lib/server/errors";
 import { createSnapshot, rebuildSnapshot } from "@/lib/server/snapshots";
+import {
+  createSubscription,
+  recordSubscriptionCharge,
+  setSubscriptionState,
+  skipSubscriptionCharge,
+  updateSubscription,
+} from "@/lib/server/subscriptions";
 import { createTransaction, setTransactionDeleted, updateTransaction } from "@/lib/server/transactions";
+import { bangkokDate } from "@/lib/dates";
 import {
   accountCreateSchema,
   accountStatusSchema,
@@ -24,6 +32,8 @@ import {
   reconcileSchema,
   snapshotCreateSchema,
   snapshotRebuildSchema,
+  subscriptionChargeSchema,
+  subscriptionSchema,
   transactionDeleteSchema,
   transactionEntrySchema,
   transactionUpdateSchema,
@@ -181,4 +191,47 @@ export async function rebuildSnapshotAction(_: ActionState, fd: FormData): Promi
   revalidatePath("/snapshots");
   revalidatePath("/reports");
   return { ok: true, message: "Rebuilt. The previous snapshot is kept and marked as superseded." };
+}
+
+// ------------------------------------------------------------ subscriptions
+
+export async function createSubscriptionAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const r = await run(subscriptionSchema, fd, (db, i) => createSubscription(db, i), { name: "createSubscription" });
+  if (!r.ok) return r;
+  revalidatePath("/", "layout");
+  redirect("/subscriptions");
+}
+
+export async function updateSubscriptionAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const r = await run(subscriptionSchema.extend({ id: uuid }), fd, (db, { id, ...i }) => updateSubscription(db, id, i), {
+    name: "updateSubscription",
+  });
+  if (!r.ok) return r;
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Saved. Past payments keep their original amounts." };
+}
+
+export async function recordSubscriptionChargeAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const r = await run(subscriptionChargeSchema, fd, (db, i) => recordSubscriptionCharge(db, i), {
+    name: "recordSubscriptionCharge",
+  });
+  if (!r.ok) return r;
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Payment recorded." };
+}
+
+export async function skipSubscriptionChargeAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const r = await run(z.object({ id: uuid, dueDate: subscriptionChargeSchema.shape.dueDate }), fd, (db, i) =>
+    skipSubscriptionCharge(db, i.id, i.dueDate), { name: "skipSubscriptionCharge" });
+  if (!r.ok) return r;
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Skipped." };
+}
+
+export async function setSubscriptionStateAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const r = await run(z.object({ id: uuid, state: z.enum(["active", "paused", "cancelled"]) }), fd, (db, i) =>
+    setSubscriptionState(db, i.id, i.state, bangkokDate()), { name: "setSubscriptionState" });
+  if (!r.ok) return r;
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Updated." };
 }

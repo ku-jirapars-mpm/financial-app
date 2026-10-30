@@ -5,19 +5,24 @@ import { Money } from "@/components/money";
 import { TransactionList } from "@/components/transaction-list";
 import { Button } from "@/components/ui/button";
 import { Row, Section } from "@/components/ui/list";
-import { bangkokDate, formatMonth, monthStart } from "@/lib/dates";
+import { addDays, bangkokDate, formatMonth, monthStart } from "@/lib/dates";
 import { withUserTransaction } from "@/lib/db";
 import { ACCOUNT_KIND_LABELS, isLiability } from "@/lib/domain";
 import { requireUser } from "@/lib/session";
 import { listAccounts } from "@/lib/server/accounts";
 import { monthlyFlows } from "@/lib/server/reports";
+import { dueSubscriptions } from "@/lib/server/subscriptions";
 import { listTransactions } from "@/lib/server/transactions";
+import { TransactionIcon } from "@/components/category-icon";
+import { dueLabel } from "@/lib/relative-date";
+import { ChargeButtons } from "./subscriptions/charge-buttons";
 import { transactionFilterSchema } from "@/lib/validation";
 
 export default async function Overview() {
   const user = await requireUser();
   const today = bangkokDate();
-  const { accounts, month, recent } = await withUserTransaction(user.id, async (db) => ({
+  const { accounts, month, recent, upcoming } = await withUserTransaction(user.id, async (db) => ({
+    upcoming: await dueSubscriptions(db, addDays(today, 7)),
     accounts: await listAccounts(db),
     month: (await monthlyFlows(db, monthStart(today), today))[0]!,
     recent: (await listTransactions(db, transactionFilterSchema.parse({}))).rows.slice(0, 6),
@@ -76,6 +81,30 @@ export default async function Overview() {
           </p>
         </div>
       </Section>
+
+      {upcoming.length > 0 && (
+        <Section title="Upcoming charges" action={<Link href="/subscriptions">Subscriptions</Link>}>
+          {upcoming.map((s) => {
+            const due = s.next_occurrence_date! <= today;
+            return (
+              <Row
+                key={s.id}
+                leading={<TransactionIcon type="expense" category={s.name} />}
+                title={<Link href={`/subscriptions/${s.id}`}>{s.name}</Link>}
+                subtitle={<span className={due ? "text-negative" : undefined}>{dueLabel(s.next_occurrence_date!, today)}</span>}
+                trailing={
+                  due ? (
+                    <ChargeButtons id={s.id} dueDate={s.next_occurrence_date!} amountSatang={s.amount_satang} />
+                  ) : (
+                    <Money satang={s.amount_satang} />
+                  )
+                }
+                trailingSub={due ? <Money satang={s.amount_satang} /> : s.account_name}
+              />
+            );
+          })}
+        </Section>
+      )}
 
       <Section title="Accounts" action={<Link href="/accounts">See all</Link>}>
         {accounts.map((a) => (

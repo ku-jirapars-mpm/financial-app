@@ -17,11 +17,11 @@ export const BACKUP_TABLES = [
   "loans",
   "credit_card_statements",
   "installment_plans",
+  "recurring_transactions",
   "transactions",
   "installment_payments",
   "debt_payments",
   "reconciliations",
-  "recurring_transactions",
   "budgets",
   "financial_snapshots",
   "audit_logs",
@@ -266,6 +266,7 @@ export async function restoreBackup(db: Db, backup: Backup): Promise<RestoreResu
   await insertRows(db, "loans", T.loans.map(remap));
   await insertRows(db, "credit_card_statements", T.credit_card_statements.map(remap));
   await insertRows(db, "installment_plans", T.installment_plans.map((r) => remap({ ...r, origin_transaction_id: null })));
+  await insertRows(db, "recurring_transactions", T.recurring_transactions.map(remap));
   await insertRows(db, "transactions", T.transactions.map(remap));
   for (const plan of T.installment_plans) {
     if (plan.origin_transaction_id) {
@@ -278,7 +279,6 @@ export async function restoreBackup(db: Db, backup: Backup): Promise<RestoreResu
   await insertRows(db, "installment_payments", T.installment_payments.map(remap));
   await insertRows(db, "debt_payments", T.debt_payments.map(remap));
   await insertRows(db, "reconciliations", T.reconciliations.map(remap));
-  await insertRows(db, "recurring_transactions", T.recurring_transactions.map(remap));
   await insertRows(db, "budgets", T.budgets.map(remap));
   await insertRows(db, "financial_snapshots", T.financial_snapshots.map(remap));
   await db.query("select app.restore_audit_logs($1::jsonb)", [JSON.stringify(T.audit_logs.map(remap))]);

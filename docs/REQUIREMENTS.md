@@ -111,6 +111,7 @@ tamper detection and restore, reconciliation, debt balances. `tests/e2e` runs th
 ## 9. Implementation phases
 
 - **Phase 1 — done:** database, migrations, auth, RLS, accounts, categories, transactions, dashboard, persistence tests, PWA.
-- **Phase 2 — partially done:** schema for credit cards, statements, loans, installments, debt payments; debt payments with interest/fee breakdown and reconciliation are live. ⏳ UI to create card terms, statements, loan terms and installment plans (with generated schedules), statement payment status, recurring transactions and budgets.
+- **Subscriptions — done:** recurring expenses (Netflix, Spotify…) with monthly/yearly totals, upcoming charges on Overview, one-tap idempotent "Record" that posts the expense and advances the schedule (anchored to the start day, no month-end drift), skip, price changes, pause/resume/cancel with history kept. Charges are confirmed by the user, not auto-posted.
+- **Phase 2 — partially done:** schema for credit cards, statements, loans, installments, debt payments; debt payments with interest/fee breakdown and reconciliation are live. ⏳ UI to create card terms, statements, loan terms and installment plans (with generated schedules), statement payment status, budgets.
 - **Phase 3 — mostly done:** snapshots, historical reports, charts. ⏳ debt payoff simulations (avalanche/snowball).
 - **Phase 4 — partially done:** full backup/restore with integrity checks. ⏳ "AI-ready" export package (explicit, user-initiated only), formal security/data-integrity audit.

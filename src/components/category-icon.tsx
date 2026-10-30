@@ -13,6 +13,7 @@ import {
   Landmark,
   Percent,
   Receipt,
+  Repeat,
   RotateCcw,
   Scale,
   Shield,
@@ -29,6 +30,7 @@ import type { AccountKind, TransactionType } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 
 const BY_CATEGORY: [RegExp, LucideIcon, string][] = [
+  [/subscri|netflix|spotify|youtube|icloud|stream/i, Repeat, "#e50914"],
   [/food|dining|restaurant/i, Utensils, "#ff9500"],
   [/grocer/i, ShoppingBasket, "#34c759"],
   [/transport|car|fuel|taxi/i, Car, "#5ac8fa"],
@@ -91,4 +93,8 @@ export function TransactionIcon({ type, category }: { type: TransactionType; cat
 export function AccountIcon({ kind }: { kind: AccountKind }) {
   const [Icon, color] = BY_ACCOUNT[kind];
   return <Bubble Icon={Icon} color={color} />;
+}
+
+export function SubscriptionIcon() {
+  return <Bubble Icon={Repeat} color="#e50914" />;
 }
