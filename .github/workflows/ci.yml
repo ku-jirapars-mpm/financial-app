@@ -1,0 +1,40 @@
+name: CI
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: myfinance
+          POSTGRES_PASSWORD: myfinance
+          POSTGRES_DB: myfinance_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U myfinance" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://myfinance:myfinance@localhost:5432/myfinance_test
+      TEST_SCRATCH_DATABASE_URL: postgres://myfinance:myfinance@localhost:5432/myfinance_scratch
+      E2E_DATABASE_URL: postgres://myfinance:myfinance@localhost:5432/myfinance_e2e
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Create extra databases
+        run: |
+          PGPASSWORD=myfinance psql -h localhost -U myfinance -d myfinance_test -c "create database myfinance_scratch" -c "create database myfinance_e2e"
+      - run: npm run typecheck
+      - run: npm test
+      - run: DATABASE_URL_UNPOOLED=$E2E_DATABASE_URL npm run db:migrate
+      - run: npm run build
+        env:
+          DATABASE_URL: ${{ env.E2E_DATABASE_URL }}
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
