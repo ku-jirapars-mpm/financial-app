@@ -1,6 +1,14 @@
 # Deploying MyFinance (Neon + Vercel) and installing it on iPhone
 
-## 1. Create the Neon database
+## Current production database
+
+| | |
+|---|---|
+| Neon project | `myfinance` (id `red-firefly-59886881`), region AWS ap-southeast-1 (Singapore), Postgres 17 |
+| Branch | `main` (production). Migrations `0001`–`0004` applied 2026-10-30 and verified (RLS forced on 15 tables, app role without BYPASSRLS, delete guards active). |
+| Connection strings | Neon console → project `myfinance` → **Connect**. Never commit them. |
+
+## 1. Create the Neon database (only for a new environment)
 
 1. Sign in at <https://console.neon.tech> and create a project. Pick region **AWS Asia Pacific (Singapore)** (closest to Bangkok).
 2. In **Connection Details** copy two strings:
