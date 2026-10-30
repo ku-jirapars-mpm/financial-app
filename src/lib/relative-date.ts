@@ -7,7 +7,7 @@ export function dueLabel(date: string, today: string): string {
   if (days === 1) return "Tomorrow";
   if (days === -1) return "Yesterday";
   if (days < 0) return `${-days} days overdue`;
-  if (days <= 14) return `in ${days} days`;
+  if (days <= 45) return `in ${days} days`;
   return formatDate(date);
 }
 

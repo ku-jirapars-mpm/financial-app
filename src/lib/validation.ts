@@ -178,3 +178,14 @@ export const subscriptionChargeSchema = z.object({
   amount: positiveBaht,
   date: isoDate,
 });
+
+const dayOfMonth = z.coerce.number().int().min(1, "1–31").max(31, "1–31");
+
+/** Credit card terms: limit, statement day (วันตัดบัตร), payment due day (วันชำระวันสุดท้าย). */
+export const cardDetailsSchema = z.object({
+  creditLimit: bahtAmount.pipe(z.number().int().min(0, "Limit can't be negative")),
+  statementDay: dayOfMonth,
+  dueDay: dayOfMonth,
+});
+
+export const cardDetailsUpdateSchema = cardDetailsSchema.extend({ accountId: uuid });

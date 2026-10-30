@@ -7,7 +7,7 @@ test("sign up, record money, review history, snapshot and back up", async ({ pag
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill("correct horse battery staple");
   await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page.getByText("Welcome to MyFinance")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Welcome to MyFinance" })).toBeVisible();
 
   // Account
   await page.goto("/accounts/new");

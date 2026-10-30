@@ -6,11 +6,14 @@ test("add a Netflix subscription and record its charge from Overview", async ({ 
   await page.getByLabel("Email").fill(`sub-${Date.now()}@example.test`);
   await page.getByLabel("Password").fill("correct horse battery staple");
   await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page.getByText("Welcome to MyFinance")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Welcome to MyFinance" })).toBeVisible();
 
   await page.goto("/accounts/new");
   await page.getByLabel("Name").fill("KTC Visa");
   await page.selectOption("#kind", "credit_card");
+  await page.getByLabel(/Credit limit/).fill("30000");
+  await page.getByLabel(/Statement day/).fill("20");
+  await page.getByLabel(/Due day/).fill("5");
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page.getByRole("heading", { name: "KTC Visa" })).toBeVisible({ timeout: 15_000 });
 
@@ -23,7 +26,7 @@ test("add a Netflix subscription and record its charge from Overview", async ({ 
 
   // Due today → appears in Overview with a Record button; double tap records once.
   await page.goto("/");
-  const upcoming = page.locator("section", { hasText: "Upcoming charges" });
+  const upcoming = page.locator("section", { has: page.getByRole("heading", { name: "Upcoming" }) });
   await expect(upcoming.getByText("Netflix")).toBeVisible();
   await upcoming.getByRole("button", { name: "Record" }).dblclick();
   await expect(upcoming).toHaveCount(0);

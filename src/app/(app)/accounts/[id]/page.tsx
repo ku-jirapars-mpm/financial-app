@@ -14,15 +14,20 @@ import { getAccount, listReconciliations } from "@/lib/server/accounts";
 import { getRecordHistory, listTransactions } from "@/lib/server/transactions";
 import { transactionFilterSchema } from "@/lib/validation";
 import { EditAccountForm, ReconcileForm, StatusForm } from "./account-forms";
+import { CardDetailsForm } from "./card-details-form";
+import { CardSummary } from "@/components/card-summary";
+import { cardStatus } from "@/lib/server/credit-cards";
 
 export const metadata = { title: "Account" };
 
 export default async function AccountPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const id = uuidOr404((await params).id);
-  const { account, recs, txs, history } = await or404(
+  const today = bangkokDate();
+  const { account, recs, txs, history, card } = await or404(
     withUserTransaction(user.id, async (db) => ({
       account: await getAccount(db, id),
+      card: await cardStatus(db, id, today),
       recs: await listReconciliations(db, id),
       txs: await listTransactions(db, transactionFilterSchema.parse({ accountId: id })),
       history: await getRecordHistory(db, "accounts", id),
@@ -50,6 +55,21 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
           transactions.
         </Alert>
       )}
+
+      {account.kind === "credit_card" &&
+        (card ? (
+          <CardSummary accountId={account.id} status={card} today={today} />
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Set up this card</CardTitle>
+              <CardDescription>Add the limit, statement day and due day to track usage and payment dates.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CardDetailsForm accountId={account.id} />
+            </CardContent>
+          </Card>
+        ))}
 
       <Card>
         <CardContent className="grid gap-1 p-4">
@@ -82,7 +102,7 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
               <CardDescription>Compare with your bank or card statement. Every reconciliation is kept permanently.</CardDescription>
             </CardHeader>
             <CardContent>
-              <ReconcileForm accountId={account.id} today={bangkokDate()} liability={liability} />
+              <ReconcileForm accountId={account.id} today={today} liability={liability} />
             </CardContent>
           </Card>
         )}
@@ -110,6 +130,23 @@ export default async function AccountPage({ params }: { params: Promise<{ id: st
             ))}
           </CardContent>
         </Card>
+        {card && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Card terms</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CardDetailsForm
+                accountId={account.id}
+                defaults={{
+                  creditLimit: card.details.credit_limit_satang,
+                  statementDay: card.details.statement_day,
+                  dueDay: card.details.due_day,
+                }}
+              />
+            </CardContent>
+          </Card>
+        )}
         <Card>
           <CardHeader>
             <CardTitle>Details</CardTitle>

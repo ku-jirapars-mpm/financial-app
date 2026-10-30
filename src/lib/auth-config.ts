@@ -61,7 +61,8 @@ export function authOptions(pool: Pool) {
     },
     account: { modelName: "auth_accounts" },
     verification: { modelName: "auth_verifications" },
-    rateLimit: { enabled: true, window: 60, max: 30, storage: "database", modelName: "auth_rate_limits" },
+    // AUTH_RATE_LIMIT=off exists only for the automated end-to-end tests, which sign up many users quickly.
+    rateLimit: { enabled: process.env.AUTH_RATE_LIMIT !== "off", window: 60, max: 30, storage: "database", modelName: "auth_rate_limits" },
     advanced: {
       database: { generateId: "uuid" },
       useSecureCookies: process.env.NODE_ENV === "production",

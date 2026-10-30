@@ -4,6 +4,7 @@ import { ActionForm } from "@/components/action-form";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { ACCOUNT_KINDS, ACCOUNT_KIND_LABELS, isLiability, type AccountKind } from "@/lib/domain";
 import { createAccountAction } from "../../actions";
+import { CardTermsFields } from "../card-terms-fields";
 
 export function AccountForm({ today }: { today: string }) {
   const [kind, setKind] = useState<AccountKind>("bank");
@@ -42,6 +43,7 @@ export function AccountForm({ today }: { today: string }) {
               <Input id="openingBalanceDate" name="openingBalanceDate" type="date" defaultValue={today} required />
             </Field>
           </div>
+          {kind === "credit_card" && <CardTermsFields errors={s.fieldErrors} />}
           <Field label="Notes (optional)" htmlFor="notes" error={s.fieldErrors?.notes}>
             <Textarea id="notes" name="notes" maxLength={2000} />
           </Field>

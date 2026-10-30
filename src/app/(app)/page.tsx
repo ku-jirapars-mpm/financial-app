@@ -12,6 +12,9 @@ import { requireUser } from "@/lib/session";
 import { listAccounts } from "@/lib/server/accounts";
 import { monthlyFlows } from "@/lib/server/reports";
 import { dueSubscriptions } from "@/lib/server/subscriptions";
+import { allCardStatuses, type CardStatus } from "@/lib/server/credit-cards";
+import { usageTone } from "@/components/card-summary";
+import { satangToBahtString } from "@/lib/money";
 import { listTransactions } from "@/lib/server/transactions";
 import { TransactionIcon } from "@/components/category-icon";
 import { dueLabel } from "@/lib/relative-date";
@@ -21,8 +24,9 @@ import { transactionFilterSchema } from "@/lib/validation";
 export default async function Overview() {
   const user = await requireUser();
   const today = bangkokDate();
-  const { accounts, month, recent, upcoming } = await withUserTransaction(user.id, async (db) => ({
+  const { accounts, month, recent, upcoming, cards } = await withUserTransaction(user.id, async (db) => ({
     upcoming: await dueSubscriptions(db, addDays(today, 7)),
+    cards: await allCardStatuses(db, today),
     accounts: await listAccounts(db),
     month: (await monthlyFlows(db, monthStart(today), today))[0]!,
     recent: (await listTransactions(db, transactionFilterSchema.parse({}))).rows.slice(0, 6),
@@ -43,6 +47,9 @@ export default async function Overview() {
   const assets = accounts.filter((a) => !isLiability(a.kind)).reduce((s, a) => s + a.balance_satang, 0);
   const debt = accounts.filter((a) => isLiability(a.kind)).reduce((s, a) => s + Math.max(0, -a.balance_satang), 0);
   const net = assets - debt;
+  const cardByAccount = new Map(cards.map((c) => [c.details.account_id, c]));
+  // Card bills due within a week (or overdue) that still have an amount to pay.
+  const cardsDue = cards.filter((c) => (c.dueSatang ?? 0) > 0 && c.daysUntilDue <= 7);
   const spentShare = month.income_satang > 0 ? Math.min(1, month.expenses_satang / month.income_satang) : month.expenses_satang > 0 ? 1 : 0;
 
   return (
@@ -82,8 +89,32 @@ export default async function Overview() {
         </div>
       </Section>
 
-      {upcoming.length > 0 && (
-        <Section title="Upcoming charges" action={<Link href="/subscriptions">Subscriptions</Link>}>
+      {(upcoming.length > 0 || cardsDue.length > 0) && (
+        <Section title="Upcoming" action={<Link href="/subscriptions">Subscriptions</Link>}>
+          {cardsDue.map((c) => {
+            const overdue = c.daysUntilDue < 0;
+            return (
+              <Row
+                key={c.details.id}
+                leading={<AccountIcon kind="credit_card" />}
+                title={<Link href={`/accounts/${c.details.account_id}`}>{c.accountName} bill</Link>}
+                subtitle={
+                  <span className={overdue || c.daysUntilDue <= 2 ? "text-negative" : undefined}>
+                    Due {dueLabel(c.dueDate, today).toLowerCase()} · วันชำระ
+                  </span>
+                }
+                trailing={
+                  <Link
+                    href={`/transactions/new?type=debt_payment&toAccountId=${c.details.account_id}&amount=${satangToBahtString(c.dueSatang!)}`}
+                    className="rounded-full bg-primary px-3 py-1 text-[13px] font-semibold text-primary-foreground"
+                  >
+                    Pay
+                  </Link>
+                }
+                trailingSub={<Money satang={c.dueSatang!} />}
+              />
+            );
+          })}
           {upcoming.map((s) => {
             const due = s.next_occurrence_date! <= today;
             return (
@@ -113,7 +144,13 @@ export default async function Overview() {
             href={`/accounts/${a.id}`}
             leading={<AccountIcon kind={a.kind} />}
             title={a.name}
-            subtitle={ACCOUNT_KIND_LABELS[a.kind]}
+            subtitle={
+              cardByAccount.has(a.id) ? (
+                <CardUsage status={cardByAccount.get(a.id)!} />
+              ) : (
+                ACCOUNT_KIND_LABELS[a.kind]
+              )
+            }
             trailing={
               <Money
                 satang={isLiability(a.kind) ? -a.balance_satang : a.balance_satang}
@@ -143,5 +180,21 @@ function Stat({ label, satang, className, signed }: { label: string; satang: num
       <span className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
       <Money satang={satang} signed={signed} className={`whitespace-nowrap text-[15px] font-semibold ${className ?? ""}`} />
     </div>
+  );
+}
+
+function CardUsage({ status }: { status: CardStatus }) {
+  return (
+    <span className="flex items-center gap-2">
+      <span className="h-1.5 w-14 overflow-hidden rounded-full bg-muted">
+        <span
+          className={`block h-full rounded-full ${usageTone(status.usedShare)}`}
+          style={{ width: `${Math.round(status.usedShare * 100)}%` }}
+        />
+      </span>
+      <span>
+        {Math.round(status.usedShare * 100)}% of <Money satang={status.details.credit_limit_satang} />
+      </span>
+    </span>
   );
 }

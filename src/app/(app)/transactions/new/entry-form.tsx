@@ -28,9 +28,12 @@ export function TransactionEntryForm(props: {
   defaultAccountId: string;
   accounts: { id: string; name: string; kind: AccountKind }[];
   categories: { id: string; name: string; kind: "income" | "expense" }[];
+  defaultType?: EntryType;
+  defaultToAccountId?: string;
+  defaultAmount?: string;
 }) {
-  const [type, setType] = useState<EntryType>("expense");
-  const [amountText, setAmountText] = useState("");
+  const [type, setType] = useState<EntryType>(props.defaultType ?? "expense");
+  const [amountText, setAmountText] = useState(props.defaultAmount ?? "");
   const twoSided = type === "transfer" || type === "debt_payment";
   const categoryKind = type === "income" ? "income" : "expense";
   const fromAccounts = type === "debt_payment" ? props.accounts.filter((a) => !isLiability(a.kind)) : props.accounts;
@@ -64,7 +67,7 @@ export function TransactionEntryForm(props: {
                   inputMode="decimal"
                   placeholder="0"
                   required
-                  autoFocus
+                  autoFocus={!props.defaultAmount}
                   aria-label="Amount (฿)"
                   autoComplete="off"
                   className={cn(
@@ -116,7 +119,11 @@ export function TransactionEntryForm(props: {
                     name="toAccountId"
                     className={bare}
                     dir="rtl"
-                    defaultValue={toAccounts.find((a) => a.id !== props.defaultAccountId)?.id}
+                    defaultValue={
+                      toAccounts.some((a) => a.id === props.defaultToAccountId)
+                        ? props.defaultToAccountId
+                        : toAccounts.find((a) => a.id !== props.defaultAccountId)?.id
+                    }
                   >
                     {toAccounts.map((a) => (
                       <option key={a.id} value={a.id}>{a.name}</option>

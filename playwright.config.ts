@@ -16,6 +16,7 @@ export default defineConfig({
       BETTER_AUTH_SECRET: "e2e-secret-e2e-secret-e2e-secret-0123",
       BETTER_AUTH_URL: "http://localhost:3100",
       ALLOW_SIGNUP: "true",
+      AUTH_RATE_LIMIT: "off",
     },
   },
 });

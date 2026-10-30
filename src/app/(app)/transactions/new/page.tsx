@@ -10,9 +10,9 @@ import { TransactionEntryForm } from "./entry-form";
 
 export const metadata = { title: "Add transaction" };
 
-export default async function NewTransactionPage({ searchParams }: { searchParams: Promise<{ accountId?: string }> }) {
+export default async function NewTransactionPage({ searchParams }: { searchParams: Promise<{ accountId?: string; type?: string; toAccountId?: string; amount?: string }> }) {
   const user = await requireUser();
-  const { accountId } = await searchParams;
+  const { accountId, type, toAccountId, amount } = await searchParams;
   const { accounts, categories } = await withUserTransaction(user.id, async (db) => ({
     accounts: await listAccounts(db),
     categories: await listCategories(db),
@@ -28,6 +28,9 @@ export default async function NewTransactionPage({ searchParams }: { searchParam
         <TransactionEntryForm
               today={bangkokDate()}
               defaultAccountId={accounts.some((a) => a.id === accountId) ? accountId! : accounts[0]!.id}
+              defaultType={type === "debt_payment" || type === "transfer" || type === "income" ? type : "expense"}
+              defaultToAccountId={accounts.some((a) => a.id === toAccountId) ? toAccountId : undefined}
+              defaultAmount={amount && /^\d+(\.\d{1,2})?$/.test(amount) ? amount : ""}
               accounts={accounts.map((a) => ({ id: a.id, name: a.name, kind: a.kind }))}
               categories={categories.map((c) => ({ id: c.id, name: c.name, kind: c.kind }))}
             />

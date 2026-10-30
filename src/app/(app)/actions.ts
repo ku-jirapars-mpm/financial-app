@@ -13,6 +13,7 @@ import {
   updateAccountDetails,
 } from "@/lib/server/accounts";
 import { createCategory, setCategoryArchived } from "@/lib/server/categories";
+import { saveCardDetails } from "@/lib/server/credit-cards";
 import { toUserMessage } from "@/lib/server/errors";
 import { createSnapshot, rebuildSnapshot } from "@/lib/server/snapshots";
 import {
@@ -26,6 +27,8 @@ import { createTransaction, setTransactionDeleted, updateTransaction } from "@/l
 import { bangkokDate } from "@/lib/dates";
 import {
   accountCreateSchema,
+  cardDetailsSchema,
+  cardDetailsUpdateSchema,
   accountStatusSchema,
   accountUpdateSchema,
   categoryCreateSchema,
@@ -83,7 +86,26 @@ async function run<S extends z.ZodType>(
 // ---------------------------------------------------------------- accounts
 
 export async function createAccountAction(_: ActionState, fd: FormData): Promise<ActionState> {
-  const r = await run(accountCreateSchema, fd, (db, input) => createAccount(db, input), { name: "createAccount" });
+  const isCard = fd.get("kind") === "credit_card";
+  const card = isCard ? cardDetailsSchema.safeParse(Object.fromEntries(fd)) : null;
+  if (card && !card.success) {
+    return {
+      ok: false,
+      message: "Please fix the highlighted fields.",
+      fieldErrors: z.flattenError(card.error).fieldErrors as Record<string, string[]>,
+    };
+  }
+  const r = await run(
+    accountCreateSchema,
+    fd,
+    async (db, input) => {
+      // Account and card terms are created in the same database transaction.
+      const id = await createAccount(db, input);
+      if (card?.success) await saveCardDetails(db, id, card.data);
+      return id;
+    },
+    { name: "createAccount" },
+  );
   if (!r.ok) return r;
   revalidatePath("/", "layout");
   redirect(`/accounts/${r.result as string}`);
@@ -234,4 +256,15 @@ export async function setSubscriptionStateAction(_: ActionState, fd: FormData): 
   if (!r.ok) return r;
   revalidatePath("/", "layout");
   return { ok: true, message: "Updated." };
+}
+
+// ------------------------------------------------------------ credit cards
+
+export async function saveCardDetailsAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const r = await run(cardDetailsUpdateSchema, fd, (db, { accountId, ...i }) => saveCardDetails(db, accountId, i), {
+    name: "saveCardDetails",
+  });
+  if (!r.ok) return r;
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Card details saved." };
 }
