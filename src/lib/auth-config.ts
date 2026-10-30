@@ -1,11 +1,6 @@
 import type { BetterAuthOptions } from "better-auth";
 import type { Pool } from "pg";
 
-/**
- * Better Auth configuration shared by the runtime (`auth.ts`) and tooling.
- * Auth tables live in the same Neon database under `auth_*` names with UUID ids,
- * so `auth_users.id` is the owner id stored on every financial record.
- */
 /** Accepts "example.vercel.app" as well as a full URL; trailing slashes are dropped. */
 export function normalizeBaseUrl(value: string | undefined): string | undefined {
   const v = value?.trim().replace(/\/+$/, "");
@@ -13,12 +8,39 @@ export function normalizeBaseUrl(value: string | undefined): string | undefined 
   return /^https?:\/\//i.test(v) ? v : `https://${v}`;
 }
 
+/**
+ * Origins allowed to call the auth API: the configured app URL, this
+ * deployment's own Vercel URLs (system env vars), and any extra exact origins
+ * listed comma-separated in BETTER_AUTH_TRUSTED_ORIGINS. No wildcards, so
+ * other *.vercel.app sites are never trusted.
+ */
+export function trustedOrigins(env: Record<string, string | undefined> = process.env): string[] {
+  const candidates = [
+    env.BETTER_AUTH_URL,
+    env.VERCEL_PROJECT_PRODUCTION_URL,
+    env.VERCEL_BRANCH_URL,
+    env.VERCEL_URL,
+    ...(env.BETTER_AUTH_TRUSTED_ORIGINS ?? "").split(","),
+  ];
+  const origins = candidates
+    .map((c) => normalizeBaseUrl(c))
+    .filter((u): u is string => Boolean(u))
+    .map((u) => new URL(u).origin);
+  return [...new Set(origins)];
+}
+
+/**
+ * Better Auth configuration shared by the runtime (`auth.ts`) and tooling.
+ * Auth tables live in the same Neon database under `auth_*` names with UUID ids,
+ * so `auth_users.id` is the owner id stored on every financial record.
+ */
 export function authOptions(pool: Pool) {
   return {
     appName: "MyFinance",
     database: pool,
     secret: process.env.BETTER_AUTH_SECRET,
-    baseURL: normalizeBaseUrl(process.env.BETTER_AUTH_URL),
+    baseURL: normalizeBaseUrl(process.env.BETTER_AUTH_URL ?? process.env.VERCEL_PROJECT_PRODUCTION_URL),
+    trustedOrigins: trustedOrigins(),
     telemetry: { enabled: false },
     emailAndPassword: {
       enabled: true,

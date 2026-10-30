@@ -45,6 +45,9 @@ To try a migration safely first, create a Neon **branch**, run the migration aga
 | `BETTER_AUTH_SECRET` | output of `openssl rand -base64 32` |
 | `BETTER_AUTH_URL` | your site URL, e.g. `https://myfinance-yourname.vercel.app` |
 | `ALLOW_SIGNUP` | `true` (only for the first deploy) |
+| `BETTER_AUTH_TRUSTED_ORIGINS` | optional: other exact addresses you open the app from, comma-separated (e.g. `https://financial-app-yourteam.vercel.app`) |
+
+Always open the app at the address in `BETTER_AUTH_URL` (or one listed in `BETTER_AUTH_TRUSTED_ORIGINS`); sign-in from any other address is rejected with "Invalid origin".
 
 3. Deploy. Open the site, go to `/signup` and create your account (password ≥ 12 characters).
 4. Set `ALLOW_SIGNUP=false` and redeploy. Registration is now closed.

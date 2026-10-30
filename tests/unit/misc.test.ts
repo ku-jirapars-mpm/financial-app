@@ -78,3 +78,23 @@ describe("withStrictSsl", () => {
     expect(withStrictSsl("postgres://h/db?x=1&sslmode=verify-full")).toBe("postgres://h/db?x=1&sslmode=verify-full");
   });
 });
+
+describe("trustedOrigins", () => {
+  it("trusts only the configured and Vercel-provided origins", async () => {
+    const { trustedOrigins } = await import("../../src/lib/auth-config");
+    expect(
+      trustedOrigins({
+        BETTER_AUTH_URL: "financial-app-five-gamma.vercel.app",
+        VERCEL_PROJECT_PRODUCTION_URL: "financial-app-five-gamma.vercel.app",
+        VERCEL_URL: "financial-app-abc123.vercel.app",
+        BETTER_AUTH_TRUSTED_ORIGINS: "https://financial-app-mpmth.vercel.app/, money.example.com",
+      }),
+    ).toEqual([
+      "https://financial-app-five-gamma.vercel.app",
+      "https://financial-app-abc123.vercel.app",
+      "https://financial-app-mpmth.vercel.app",
+      "https://money.example.com",
+    ]);
+    expect(trustedOrigins({})).toEqual([]);
+  });
+});
