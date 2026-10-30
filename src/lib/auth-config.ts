@@ -6,12 +6,19 @@ import type { Pool } from "pg";
  * Auth tables live in the same Neon database under `auth_*` names with UUID ids,
  * so `auth_users.id` is the owner id stored on every financial record.
  */
+/** Accepts "example.vercel.app" as well as a full URL; trailing slashes are dropped. */
+export function normalizeBaseUrl(value: string | undefined): string | undefined {
+  const v = value?.trim().replace(/\/+$/, "");
+  if (!v) return undefined;
+  return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+}
+
 export function authOptions(pool: Pool) {
   return {
     appName: "MyFinance",
     database: pool,
     secret: process.env.BETTER_AUTH_SECRET,
-    baseURL: process.env.BETTER_AUTH_URL,
+    baseURL: normalizeBaseUrl(process.env.BETTER_AUTH_URL),
     telemetry: { enabled: false },
     emailAndPassword: {
       enabled: true,

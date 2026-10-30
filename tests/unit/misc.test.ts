@@ -57,3 +57,13 @@ describe("debt payment entry", () => {
     expect(transactionEntrySchema.safeParse({ ...base, fees: "-1" }).success).toBe(false);
   });
 });
+
+describe("normalizeBaseUrl", () => {
+  it("adds https:// when the scheme is missing", async () => {
+    const { normalizeBaseUrl } = await import("../../src/lib/auth-config");
+    expect(normalizeBaseUrl("financial-app-five-gamma.vercel.app")).toBe("https://financial-app-five-gamma.vercel.app");
+    expect(normalizeBaseUrl("https://x.vercel.app/")).toBe("https://x.vercel.app");
+    expect(normalizeBaseUrl("http://localhost:3000")).toBe("http://localhost:3000");
+    expect(normalizeBaseUrl(" ")).toBeUndefined();
+  });
+});
