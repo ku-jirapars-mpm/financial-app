@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
   appleWebApp: { capable: true, title: "MyFinance", statusBarStyle: "default" },
   formatDetection: { telephone: false },
+  // Next.js only emits the generic tag; older iOS needs Apple's own to open full-screen from the home screen.
+  other: { "apple-mobile-web-app-capable": "yes" },
 };
 
 export const viewport: Viewport = {
