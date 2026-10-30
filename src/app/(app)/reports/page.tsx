@@ -64,7 +64,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="grid gap-6">
-      <PageHeader title="Reports" description="Monthly flows come from recorded transactions; balances over time come from snapshots." />
+      <PageHeader title="Reports" />
 
       <Card>
         <CardContent className="p-4">

@@ -28,6 +28,8 @@ export function getPool(): Pool {
 
 export type Db = PoolClient;
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export interface UserTxOptions {
   /** Stored with audit log rows written by triggers during this transaction. */
   reason?: string | null;
@@ -45,13 +47,15 @@ export async function withUserTransaction<T>(
   options: UserTxOptions = {},
   pool: Pool = getPool(),
 ): Promise<T> {
+  if (!UUID_RE.test(userId)) throw new Error("invalid user id");
   const client = await pool.connect();
   try {
-    await client.query("BEGIN");
-    await client.query(`SET LOCAL ROLE ${APP_DB_ROLE}`);
+    // One round trip instead of three: every statement here adds a full
+    // app↔database latency to each page load. Values are escaped literals.
     await client.query(
-      "SELECT set_config('app.user_id', $1, true), set_config('app.change_reason', $2, true)",
-      [userId, options.reason ?? ""],
+      `BEGIN; SET LOCAL ROLE ${APP_DB_ROLE}; ` +
+        `SELECT set_config('app.user_id', ${client.escapeLiteral(userId)}, true), ` +
+        `set_config('app.change_reason', ${client.escapeLiteral(options.reason ?? "")}, true)`,
     );
     const result = await fn(client);
     await client.query("COMMIT");

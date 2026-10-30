@@ -26,8 +26,8 @@ export default async function SnapshotsPage({ searchParams }: { searchParams: Pr
   return (
     <div className="grid gap-6">
       <PageHeader
-        title="Financial snapshots"
-        description="Immutable historical observations of your finances. They are not live balances."
+        title="Snapshots"
+        description="Month-end records of your finances"
       />
       <Card>
         <CardHeader>

@@ -20,7 +20,7 @@ export default async function SettingsPage() {
   await requireUser();
   return (
     <div className="grid max-w-3xl gap-6">
-      <PageHeader title="Backup & export" description="Keep a personal copy of your data independent of the hosted database." />
+      <PageHeader title="Backup & export" />
       <Alert>
         CSV exports are convenient for spreadsheets but are <strong>not</strong> a complete backup. Use the full JSON backup
         (and the database backups described in docs/BACKUP_AND_RESTORE.md) to be able to recover everything.

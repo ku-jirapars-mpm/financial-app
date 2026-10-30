@@ -17,11 +17,17 @@ export interface SessionUser {
  * touches financial data calls this; the returned id is what binds the
  * database session to the user for RLS.
  */
+// Users whose profile is known to exist in this server instance; skips a DB transaction per request.
+const ensuredProfiles = new Set<string>();
+
 export const requireUser = cache(async (): Promise<SessionUser> => {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/login");
   const user = { id: session.user.id, name: session.user.name, email: session.user.email };
-  await withUserTransaction(user.id, (db) => ensureProfile(db, user.name));
+  if (!ensuredProfiles.has(user.id)) {
+    await withUserTransaction(user.id, (db) => ensureProfile(db, user.name));
+    ensuredProfiles.add(user.id);
+  }
   return user;
 });
 

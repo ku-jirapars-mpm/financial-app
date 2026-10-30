@@ -55,6 +55,9 @@ export function authOptions(pool: Pool) {
       modelName: "auth_sessions",
       expiresIn: 60 * 60 * 24 * 7,
       updateAge: 60 * 60 * 24,
+      // Signed session copy in a cookie: avoids a database lookup on every page.
+      // Sign-out elsewhere takes effect within this window.
+      cookieCache: { enabled: true, maxAge: 5 * 60 },
     },
     account: { modelName: "auth_accounts" },
     verification: { modelName: "auth_verifications" },

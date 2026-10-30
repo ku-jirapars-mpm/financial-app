@@ -1,8 +1,8 @@
 import Link from "next/link";
+import { AccountIcon } from "@/components/category-icon";
 import { Money } from "@/components/money";
 import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
-import { Badge, Card, CardContent } from "@/components/ui/card";
+import { EmptyRow, Row, Section } from "@/components/ui/list";
 import { withUserTransaction } from "@/lib/db";
 import { ACCOUNT_KIND_LABELS, isLiability } from "@/lib/domain";
 import { requireUser } from "@/lib/session";
@@ -14,51 +14,45 @@ export default async function AccountsPage({ searchParams }: { searchParams: Pro
   const user = await requireUser();
   const showAll = (await searchParams).all === "1";
   const accounts = await withUserTransaction(user.id, (db) => listAccounts(db, { includeInactive: showAll }));
-  const groups = [
-    { title: "Cash & bank", rows: accounts.filter((a) => !isLiability(a.kind)) },
-    { title: "Debts", rows: accounts.filter((a) => isLiability(a.kind)) },
-  ];
+  const assets = accounts.filter((a) => !isLiability(a.kind));
+  const debts = accounts.filter((a) => isLiability(a.kind));
+  const total = (rows: typeof accounts) => rows.filter((a) => a.status === "active").reduce((s, a) => s + a.balance_satang, 0);
+
+  const list = (rows: typeof accounts, liability: boolean) =>
+    rows.length ? (
+      rows.map((a) => (
+        <Row
+          key={a.id}
+          href={`/accounts/${a.id}`}
+          leading={<AccountIcon kind={a.kind} />}
+          title={a.name}
+          subtitle={[ACCOUNT_KIND_LABELS[a.kind], a.institution, a.status !== "active" ? a.status : null].filter(Boolean).join(" · ")}
+          trailing={<Money satang={liability ? -a.balance_satang : a.balance_satang} />}
+        />
+      ))
+    ) : (
+      <EmptyRow>None</EmptyRow>
+    );
+
   return (
-    <div className="grid gap-6">
+    <>
       <PageHeader
         title="Accounts"
-        description="Balances are calculated from the opening balance plus recorded transactions."
         actions={
-          <>
-            <Button variant="outline" size="sm" asChild>
-              <Link href={showAll ? "/accounts" : "/accounts?all=1"}>{showAll ? "Active only" : "Show archived & closed"}</Link>
-            </Button>
-            <Button size="sm" asChild>
-              <Link href="/accounts/new">Add account</Link>
-            </Button>
-          </>
+          <Link href="/accounts/new" className="text-[17px] text-primary">
+            Add
+          </Link>
         }
       />
-      {groups.map((g) => (
-        <section key={g.title} className="grid gap-2">
-          <h2 className="text-sm font-medium text-muted-foreground">{g.title}</h2>
-          <Card>
-            <CardContent className="divide-y p-0">
-              {g.rows.length === 0 && <p className="p-4 text-sm text-muted-foreground">None.</p>}
-              {g.rows.map((a) => (
-                <Link key={a.id} href={`/accounts/${a.id}`} className="flex items-center justify-between gap-3 p-4 hover:bg-muted/50">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{a.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {ACCOUNT_KIND_LABELS[a.kind]}
-                      {a.institution && ` · ${a.institution}`}
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <Money satang={a.balance_satang} colored={a.balance_satang < 0} className="font-medium" />
-                    {a.status !== "active" && <Badge tone="muted">{a.status}</Badge>}
-                  </div>
-                </Link>
-              ))}
-            </CardContent>
-          </Card>
-        </section>
-      ))}
-    </div>
+      <Section title="Money" action={<Money satang={total(assets)} className="text-[13px] text-muted-foreground" />}>
+        {list(assets, false)}
+      </Section>
+      <Section title="Debts" action={<Money satang={-total(debts)} className="text-[13px] text-muted-foreground" />}>
+        {list(debts, true)}
+      </Section>
+      <Link href={showAll ? "/accounts" : "/accounts?all=1"} className="px-4 text-[15px] text-primary">
+        {showAll ? "Hide archived and closed" : "Show archived and closed"}
+      </Link>
+    </>
   );
 }

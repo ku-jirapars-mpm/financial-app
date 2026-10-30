@@ -1,47 +1,63 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:is(.dark *));
-
+/*
+ * Design tokens — modelled on iOS system colours so the installed app feels
+ * native on iPhone: grouped grey background, white inset sections, hairline
+ * separators, system font, one accent colour.
+ */
 :root {
-  --background: oklch(0.985 0.002 250);
-  --foreground: oklch(0.2 0.02 260);
-  --card: oklch(1 0 0);
+  --background: #f2f2f7;
+  --foreground: #0b0b0f;
+  --card: #ffffff;
   --card-foreground: var(--foreground);
-  --muted: oklch(0.96 0.005 250);
-  --muted-foreground: oklch(0.5 0.02 260);
-  --border: oklch(0.91 0.008 250);
-  --input: oklch(0.91 0.008 250);
-  --primary: oklch(0.45 0.13 160);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.95 0.01 250);
+  --muted: #e9e9ee;
+  --muted-foreground: #6e6e73;
+  --border: rgba(60, 60, 67, 0.16);
+  --input: #f2f2f7;
+  --primary: #0b7a5a;
+  --primary-foreground: #ffffff;
+  --secondary: #e9e9ee;
   --secondary-foreground: var(--foreground);
-  --destructive: oklch(0.55 0.2 25);
-  --destructive-foreground: oklch(0.99 0 0);
-  --positive: oklch(0.5 0.13 155);
-  --negative: oklch(0.55 0.19 25);
-  --warning: oklch(0.75 0.15 75);
-  --ring: oklch(0.45 0.13 160);
-  --radius: 0.75rem;
+  --destructive: #e5484d;
+  --destructive-foreground: #ffffff;
+  --positive: #1f8a4c;
+  --negative: #d1372f;
+  --warning: #c27c00;
+  --ring: #0b7a5a;
+  --radius: 14px;
+
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --chart-grid: rgba(60, 60, 67, 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: oklch(0.17 0.01 260);
-    --foreground: oklch(0.95 0.005 250);
-    --card: oklch(0.21 0.012 260);
-    --muted: oklch(0.25 0.012 260);
-    --muted-foreground: oklch(0.7 0.015 260);
-    --border: oklch(0.3 0.012 260);
-    --input: oklch(0.32 0.012 260);
-    --primary: oklch(0.7 0.13 160);
-    --primary-foreground: oklch(0.15 0.02 160);
-    --secondary: oklch(0.27 0.012 260);
-    --positive: oklch(0.75 0.14 155);
-    --negative: oklch(0.72 0.16 25);
+    --background: #000000;
+    --foreground: #f5f5f7;
+    --card: #1c1c1e;
+    --muted: #2c2c2e;
+    --muted-foreground: #98989f;
+    --border: rgba(84, 84, 88, 0.6);
+    --input: #2c2c2e;
+    --primary: #30d39a;
+    --primary-foreground: #04281c;
+    --secondary: #2c2c2e;
+    --positive: #32d74b;
+    --negative: #ff6961;
+    --warning: #ffd60a;
+    --ring: #30d39a;
+
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --chart-grid: rgba(84, 84, 88, 0.5);
   }
 }
 
 @theme inline {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Noto Sans Thai", "Helvetica Neue", sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -61,13 +77,14 @@
   --color-warning: var(--warning);
   --color-ring: var(--ring);
   --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-sm: calc(var(--radius) - 6px);
 }
 
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
   }
   html {
     -webkit-text-size-adjust: 100%;
@@ -75,34 +92,30 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "tnum";
-    /* iPhone notch / home indicator when installed to the home screen */
-    padding-top: env(safe-area-inset-top);
+    letter-spacing: -0.01em;
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
   }
   /* iOS Safari zooms into inputs smaller than 16px */
-  input, select, textarea {
+  input,
+  select,
+  textarea {
     font-size: 16px;
+  }
+  input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
   }
 }
 
 .privacy-blur {
-  filter: blur(6px);
+  filter: blur(7px);
   user-select: none;
 }
 
-/* Chart series (validated categorical slots 1–3; dark steps for the dark surface) */
-:root {
-  --series-1: #2a78d6;
-  --series-2: #eb6834;
-  --series-3: #1baf7a;
-  --chart-grid: oklch(0.91 0.008 250);
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --series-1: #3987e5;
-    --series-2: #d95926;
-    --series-3: #199e70;
-    --chart-grid: oklch(0.3 0.012 260);
-  }
+.no-scrollbar {
+  scrollbar-width: none;
 }

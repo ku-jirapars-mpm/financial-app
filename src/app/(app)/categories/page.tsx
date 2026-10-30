@@ -13,7 +13,7 @@ export default async function CategoriesPage() {
   const categories = await withUserTransaction(user.id, (db) => listCategories(db, { includeArchived: true }));
   return (
     <div className="grid max-w-3xl gap-6">
-      <PageHeader title="Categories" description="Categories are archived, never deleted, so past transactions keep them." />
+      <PageHeader title="Categories" />
       <Card>
         <CardHeader>
           <CardTitle>Add category</CardTitle>

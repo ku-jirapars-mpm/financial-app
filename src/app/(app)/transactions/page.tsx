@@ -3,7 +3,7 @@ import { Money } from "@/components/money";
 import { PageHeader } from "@/components/page-header";
 import { TransactionList } from "@/components/transaction-list";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Search, SlidersHorizontal } from "lucide-react";
 import { Input, Label, Select } from "@/components/ui/input";
 import { withUserTransaction } from "@/lib/db";
 import { TRANSACTION_TYPES, TRANSACTION_TYPE_LABELS } from "@/lib/domain";
@@ -35,28 +35,40 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
     return `/transactions?${q}`;
   };
 
+  const activeFilters = [filter.accountId, filter.categoryId, filter.type, filter.from, filter.to, filter.includeDeleted].filter(Boolean).length;
+
   return (
-    <div className="grid gap-6">
+    <>
       <PageHeader
-        title="Transaction history"
-        description="Search every recorded transaction. Deleted transactions are kept and can be shown."
+        title="Activity"
         actions={
-          <Button size="sm" asChild>
-            <Link href="/transactions/new">Add</Link>
-          </Button>
+          <Link href="/transactions/new" className="text-[17px] text-primary">
+            Add
+          </Link>
         }
       />
-      <Card>
-        <CardContent className="p-4">
-          <form className="grid grid-cols-2 gap-3 md:grid-cols-4" method="get">
-            <div className="col-span-2 grid gap-1.5">
-              <Label htmlFor="q">Search</Label>
-              <Input id="q" name="q" defaultValue={filter.q ?? ""} placeholder="Description, payee or notes" />
-            </div>
+      <form method="get" className="grid gap-3">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            name="q"
+            type="search"
+            defaultValue={filter.q ?? ""}
+            placeholder="Search"
+            aria-label="Search"
+            className="h-10 bg-muted pl-9"
+          />
+        </div>
+        <details className="group rounded-2xl bg-card" open={activeFilters > 0}>
+          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-[15px]">
+            <span>Filters{activeFilters ? ` · ${activeFilters}` : ""}</span>
+            <SlidersHorizontal className="size-4 text-muted-foreground" />
+          </summary>
+          <div className="grid grid-cols-2 gap-3 px-4 pb-4">
             <div className="grid gap-1.5">
               <Label htmlFor="accountId">Account</Label>
               <Select id="accountId" name="accountId" defaultValue={filter.accountId ?? ""}>
-                <option value="">All accounts</option>
+                <option value="">All</option>
                 {accounts.map((a) => (
                   <option key={a.id} value={a.id}>
                     {a.name}
@@ -68,7 +80,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
             <div className="grid gap-1.5">
               <Label htmlFor="categoryId">Category</Label>
               <Select id="categoryId" name="categoryId" defaultValue={filter.categoryId ?? ""}>
-                <option value="">All categories</option>
+                <option value="">All</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
@@ -77,12 +89,15 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
             <div className="grid gap-1.5">
               <Label htmlFor="type">Type</Label>
               <Select id="type" name="type" defaultValue={filter.type ?? ""}>
-                <option value="">All types</option>
+                <option value="">All</option>
                 {TRANSACTION_TYPES.map((t) => (
                   <option key={t} value={t}>{TRANSACTION_TYPE_LABELS[t]}</option>
                 ))}
               </Select>
             </div>
+            <label className="flex items-end gap-2 pb-3 text-[14px]">
+              <input type="checkbox" name="includeDeleted" value="1" defaultChecked={filter.includeDeleted} /> Show deleted
+            </label>
             <div className="grid gap-1.5">
               <Label htmlFor="from">From</Label>
               <Input id="from" name="from" type="date" defaultValue={filter.from ?? ""} />
@@ -91,37 +106,30 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
               <Label htmlFor="to">To</Label>
               <Input id="to" name="to" type="date" defaultValue={filter.to ?? ""} />
             </div>
-            <label className="flex items-end gap-2 pb-2 text-sm">
-              <input type="checkbox" name="includeDeleted" value="1" defaultChecked={filter.includeDeleted} /> Show deleted
-            </label>
-            <div className="col-span-2 flex gap-2 md:col-span-4">
+            <div className="col-span-2 flex gap-2">
               <Button type="submit" size="sm">Apply filters</Button>
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/transactions">Reset</Link>
+                <Link href="/transactions">Clear</Link>
               </Button>
             </div>
-          </form>
-        </CardContent>
-      </Card>
-      {!parsed.success && <p className="text-sm text-negative">Some filters were invalid and were ignored.</p>}
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
+          </div>
+        </details>
+      </form>
+      {!parsed.success && <p className="px-4 text-[13px] text-negative">Some filters were invalid and were ignored.</p>}
+      <div className="flex items-center justify-between px-4 text-[13px] text-muted-foreground">
         <span>{result.total} transactions</span>
         <span>
-          Net of shown filters: <Money satang={result.sumSatang} colored />
+          Net <Money satang={result.sumSatang} signed />
         </span>
       </div>
-      <Card>
-        <CardContent className="py-1">
-          <TransactionList rows={result.rows} />
-        </CardContent>
-      </Card>
+      <TransactionList rows={result.rows} />
       {pages > 1 && (
-        <div className="flex items-center justify-center gap-3 text-sm">
-          {filter.page > 1 && <Link className="text-primary" href={pageHref(filter.page - 1)}>← Newer</Link>}
-          <span>Page {filter.page} of {pages}</span>
-          {filter.page < pages && <Link className="text-primary" href={pageHref(filter.page + 1)}>Older →</Link>}
+        <div className="flex items-center justify-center gap-4 text-[15px]">
+          {filter.page > 1 && <Link className="text-primary" href={pageHref(filter.page - 1)}>Newer</Link>}
+          <span className="text-muted-foreground">Page {filter.page} of {pages}</span>
+          {filter.page < pages && <Link className="text-primary" href={pageHref(filter.page + 1)}>Older</Link>}
         </div>
       )}
-    </div>
+    </>
   );
 }

@@ -17,6 +17,7 @@ export function ActionForm({
   variant,
   idempotent = false,
   confirm,
+  fullWidth = false,
 }: {
   action: (prev: ActionState, formData: FormData) => Promise<ActionState>;
   submitLabel: string;
@@ -25,6 +26,8 @@ export function ActionForm({
   variant?: "default" | "destructive" | "outline" | "secondary";
   idempotent?: boolean;
   confirm?: string;
+  /** Large full-width submit button (primary forms on mobile). */
+  fullWidth?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, { ok: true });
   const [key] = useState(() => crypto.randomUUID());
@@ -40,7 +43,7 @@ export function ActionForm({
       {typeof children === "function" ? children(state) : children}
       {state.message && <Alert tone={state.ok ? "info" : "error"}>{state.message}</Alert>}
       <div>
-        <Button type="submit" variant={variant} disabled={pending}>
+        <Button type="submit" variant={variant} disabled={pending} size={fullWidth ? "lg" : "default"} className={fullWidth ? "w-full" : undefined}>
           {pending ? "Saving…" : submitLabel}
         </Button>
       </div>

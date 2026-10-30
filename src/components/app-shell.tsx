@@ -2,26 +2,27 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  ArrowLeftRight,
   BarChart3,
   Camera,
+  ChevronRight,
   Eye,
   EyeOff,
-  Home,
+  House,
+  List,
   LogOut,
-  Menu,
-  Plus,
+  PlusCircle,
   Settings,
   Tags,
   Wallet,
+  Ellipsis,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { useUiStore } from "@/lib/stores/ui";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
+  { href: "/", label: "Overview", icon: House },
+  { href: "/transactions", label: "Activity", icon: List },
   { href: "/accounts", label: "Accounts", icon: Wallet },
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/snapshots", label: "Snapshots", icon: Camera },
@@ -29,132 +30,135 @@ const NAV = [
   { href: "/settings", label: "Backup & export", icon: Settings },
 ];
 
-const MOBILE = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/transactions", label: "History", icon: ArrowLeftRight },
-  { href: "/transactions/new", label: "Add", icon: Plus, primary: true },
-  { href: "/accounts", label: "Accounts", icon: Wallet },
-  { href: "/more", label: "More", icon: Menu },
+const TABS = [
+  { href: "/", label: "Overview", icon: House },
+  { href: "/transactions", label: "Activity", icon: List },
+  { href: "/transactions/new", label: "Add", icon: PlusCircle },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/more", label: "More", icon: Ellipsis },
 ];
 
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   if (href === "/transactions" && pathname === "/transactions/new") return false;
+  if (href === "/more") return ["/more", "/accounts", "/snapshots", "/categories", "/settings"].some((p) => pathname.startsWith(p));
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function useSignOut() {
+  const router = useRouter();
+  return async () => {
+    await authClient.signOut();
+    router.replace("/login");
+    router.refresh();
+  };
+}
+
+export function PrivacyToggle({ className }: { className?: string }) {
+  const { hideAmounts, toggleHideAmounts } = useUiStore();
+  return (
+    <button
+      onClick={toggleHideAmounts}
+      aria-label={hideAmounts ? "Show amounts" : "Hide amounts"}
+      className={cn("rounded-full p-2 text-primary active:opacity-60", className)}
+    >
+      {hideAmounts ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+    </button>
+  );
 }
 
 export function AppShell({ userName, children }: { userName: string; children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const { hideAmounts, toggleHideAmounts } = useUiStore();
-
-  async function signOut() {
-    await authClient.signOut();
-    router.replace("/login");
-    router.refresh();
-  }
+  const signOut = useSignOut();
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-6xl">
-      <aside className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col gap-1 border-r p-4 md:flex">
-        <div className="mb-4 px-2 text-lg font-semibold">MyFinance</div>
-        <Link
-          href="/transactions/new"
-          className="mb-2 flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
-        >
-          <Plus className="size-4" /> Add transaction
-        </Link>
+    <div className="mx-auto flex min-h-dvh max-w-5xl">
+      <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-0.5 px-3 py-6 md:flex">
+        <div className="mb-5 px-3 text-[20px] font-bold tracking-tight">MyFinance</div>
         {NAV.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}
             className={cn(
-              "flex items-center gap-2 rounded-md px-3 py-2 text-sm",
-              isActive(pathname, href) ? "bg-muted font-medium" : "text-muted-foreground hover:bg-muted",
+              "flex items-center gap-3 rounded-xl px-3 py-2 text-[15px]",
+              isActive(pathname, href) ? "bg-card font-semibold text-primary" : "text-foreground/80 hover:bg-card/60",
             )}
           >
-            <Icon className="size-4" /> {label}
+            <Icon className="size-[18px]" /> {label}
           </Link>
         ))}
-        <div className="mt-auto grid gap-1 border-t pt-3 text-sm">
-          <button onClick={toggleHideAmounts} className="flex items-center gap-2 rounded-md px-3 py-2 hover:bg-muted">
-            {hideAmounts ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
-            {hideAmounts ? "Show amounts" : "Hide amounts"}
-          </button>
-          <button onClick={signOut} className="flex items-center gap-2 rounded-md px-3 py-2 hover:bg-muted">
+        <Link
+          href="/transactions/new"
+          className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-[15px] font-semibold text-primary-foreground"
+        >
+          <PlusCircle className="size-[18px]" /> New transaction
+        </Link>
+        <div className="mt-auto grid gap-0.5 text-[14px]">
+          <PrivacyToggle className="justify-self-start" />
+          <button onClick={signOut} className="flex items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-card/60">
             <LogOut className="size-4" /> Sign out
           </button>
-          <p className="truncate px-3 text-xs text-muted-foreground">{userName}</p>
+          <p className="truncate px-3 text-[12px] text-muted-foreground">{userName}</p>
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-background/90 px-4 py-3 backdrop-blur md:hidden">
-          <span className="font-semibold">MyFinance</span>
-          <button
-            onClick={toggleHideAmounts}
-            aria-label={hideAmounts ? "Show amounts" : "Hide amounts"}
-            className="rounded-md p-2 hover:bg-muted"
-          >
-            {hideAmounts ? <Eye className="size-5" /> : <EyeOff className="size-5" />}
-          </button>
-        </header>
-        <main className="flex-1 p-4 pb-28 md:p-6 md:pb-6">{children}</main>
-      </div>
+      <main
+        className="min-w-0 flex-1 px-4 pb-32 md:px-8 md:pb-10"
+        style={{ paddingTop: "max(env(safe-area-inset-top), 12px)" }}
+      >
+        <div className="mx-auto grid max-w-2xl gap-6 md:pt-6">{children}</div>
+      </main>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t bg-background/95 backdrop-blur md:hidden"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-border bg-background/85 backdrop-blur-xl md:hidden"
+        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 6px)" }}
       >
-        {MOBILE.map(({ href, label, icon: Icon, primary }) => (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              "flex flex-col items-center gap-0.5 py-2 text-[11px]",
-              isActive(pathname, href) && !primary ? "text-primary" : "text-muted-foreground",
-            )}
-          >
-            {primary ? (
-              <span className="-mt-1 flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <Icon className="size-5" />
-              </span>
-            ) : (
-              <Icon className="size-5" />
-            )}
-            {label}
-          </Link>
-        ))}
+        {TABS.map(({ href, label, icon: Icon }) => {
+          const active = isActive(pathname, href);
+          const add = href === "/transactions/new";
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                "flex flex-col items-center gap-0.5 pt-2 text-[10px] font-medium",
+                add || active ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              <Icon className={add ? "size-7" : "size-6"} strokeWidth={active || add ? 2.3 : 1.8} />
+              {!add && label}
+            </Link>
+          );
+        })}
       </nav>
     </div>
   );
 }
 
-export function SignOutButton() {
-  const router = useRouter();
+export function MoreMenu({ userName }: { userName: string }) {
+  const signOut = useSignOut();
+  const items = NAV.filter((n) => !["/", "/transactions", "/reports"].includes(n.href));
   return (
-    <button
-      className="flex w-full items-center gap-2 rounded-md px-3 py-3 text-left hover:bg-muted"
-      onClick={async () => {
-        await authClient.signOut();
-        router.replace("/login");
-        router.refresh();
-      }}
-    >
-      <LogOut className="size-4" /> Sign out
-    </button>
-  );
-}
-
-export function MoreMenu() {
-  return (
-    <div className="grid divide-y rounded-lg border bg-card">
-      {NAV.filter((n) => !["/", "/transactions", "/accounts"].includes(n.href)).map(({ href, label, icon: Icon }) => (
-        <Link key={href} href={href} className="flex items-center gap-2 px-3 py-3 hover:bg-muted">
-          <Icon className="size-4" /> {label}
-        </Link>
-      ))}
-      <SignOutButton />
+    <div className="grid gap-6">
+      <div className="overflow-hidden rounded-2xl bg-card">
+        {items.map(({ href, label, icon: Icon }) => (
+          <Link key={href} href={href} className="flex items-center gap-3 pl-4 active:bg-muted">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-primary/12 text-primary">
+              <Icon className="size-[18px]" />
+            </span>
+            <span className="flex flex-1 items-center border-b border-border py-3 pr-4 text-[16px]">
+              <span className="flex-1">{label}</span>
+              <ChevronRight className="size-4 text-muted-foreground/60" />
+            </span>
+          </Link>
+        ))}
+      </div>
+      <div className="overflow-hidden rounded-2xl bg-card">
+        <button onClick={signOut} className="w-full px-4 py-3 text-left text-[16px] text-destructive active:bg-muted">
+          Sign out
+        </button>
+      </div>
+      <p className="text-center text-[12px] text-muted-foreground">Signed in as {userName}</p>
     </div>
   );
 }

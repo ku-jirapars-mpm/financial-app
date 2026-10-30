@@ -79,3 +79,9 @@ export function formatMonth(month: string): string {
     new Date(`${month.slice(0, 7)}-15T12:00:00+07:00`),
   );
 }
+
+export function addDays(date: string, n: number): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}

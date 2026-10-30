@@ -7,27 +7,28 @@ test("sign up, record money, review history, snapshot and back up", async ({ pag
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill("correct horse battery staple");
   await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await expect(page.getByText("Welcome to MyFinance")).toBeVisible();
 
   // Account
   await page.goto("/accounts/new");
   await page.getByLabel("Name").fill("KBank");
   await page.getByLabel("Opening balance (฿)").fill("10,000");
   await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page.getByRole("heading", { name: "KBank" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "KBank" })).toBeVisible({ timeout: 15_000 });
 
   // Expense with a double tap on Save must create exactly one transaction.
   await page.getByRole("link", { name: "Add transaction" }).click();
   await page.getByLabel("Amount (฿)").fill("123.45");
-  await page.getByLabel("Description").fill("Lunch");
+  await page.getByLabel("Note").fill("Lunch");
   const save = page.getByRole("button", { name: "Save" });
   await save.dblclick();
-  await expect(page.getByRole("heading", { name: "Transaction history" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Activity" })).toBeVisible();
   await expect(page.getByText("1 transactions")).toBeVisible();
 
   // Filter history by search text.
   await page.getByLabel("Search").fill("lunch");
-  await page.getByRole("button", { name: "Apply filters" }).click();
+  await page.getByLabel("Search").press("Enter");
+  await expect(page).toHaveURL(/q=lunch/);
   await expect(page.getByRole("link", { name: /Lunch/ })).toBeVisible();
 
   // Edit with reason, then see it in history.
@@ -41,7 +42,7 @@ test("sign up, record money, review history, snapshot and back up", async ({ pag
 
   // Balance persisted.
   await page.goto("/accounts");
-  await expect(page.getByText("฿9,850.00")).toBeVisible();
+  await expect(page.getByRole("link", { name: /KBank/ })).toContainText("฿9,850.00");
 
   // Snapshot.
   await page.goto("/snapshots");
