@@ -1,6 +1,7 @@
 import "server-only";
 import { Pool, types, type PoolClient } from "pg";
 import { parseSatang } from "./money";
+import { withStrictSsl } from "./pg-url";
 
 // int8 (bigint) → number with an exactness check; money is stored as integer satang.
 types.setTypeParser(20, (v) => parseSatang(v));
@@ -17,7 +18,7 @@ export function getPool(): Pool {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) throw new Error("DATABASE_URL is not set");
     globalForPool.__myfinancePool = new Pool({
-      connectionString,
+      connectionString: withStrictSsl(connectionString),
       max: Number(process.env.DATABASE_POOL_MAX ?? 5),
       idleTimeoutMillis: 10_000,
     });

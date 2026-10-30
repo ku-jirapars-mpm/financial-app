@@ -67,3 +67,14 @@ describe("normalizeBaseUrl", () => {
     expect(normalizeBaseUrl(" ")).toBeUndefined();
   });
 });
+
+describe("withStrictSsl", () => {
+  it("pins sslmode=verify-full and keeps other parameters", async () => {
+    const { withStrictSsl } = await import("../../src/lib/pg-url");
+    expect(withStrictSsl("postgresql://u:p@h/db?sslmode=require&channel_binding=require")).toBe(
+      "postgresql://u:p@h/db?sslmode=verify-full&channel_binding=require",
+    );
+    expect(withStrictSsl("postgres://u:p@localhost/db")).toBe("postgres://u:p@localhost/db");
+    expect(withStrictSsl("postgres://h/db?x=1&sslmode=verify-full")).toBe("postgres://h/db?x=1&sslmode=verify-full");
+  });
+});

@@ -11,6 +11,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { Client } from "pg";
+import { withStrictSsl } from "../src/lib/pg-url";
 
 export const MIGRATIONS_DIR = join(import.meta.dirname, "..", "db", "migrations");
 const LOCK_KEY = 728_391_004;
@@ -37,7 +38,7 @@ export async function migrate(
 ): Promise<string[]> {
   const log = opts.log ?? console.log;
   const files = loadMigrations(opts.dir);
-  const client = new Client({ connectionString });
+  const client = new Client({ connectionString: withStrictSsl(connectionString) });
   await client.connect();
   const applied: string[] = [];
   try {
