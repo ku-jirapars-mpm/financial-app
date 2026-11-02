@@ -11,6 +11,7 @@ import {
   List,
   LogOut,
   PlusCircle,
+  Plus,
   Settings,
   Tags,
   Wallet,
@@ -111,27 +112,41 @@ export function AppShell({ userName, children }: { userName: string; children: R
         <div className="mx-auto grid max-w-2xl gap-6 md:pt-6">{children}</div>
       </main>
 
+      {/* iOS 26-style floating "liquid glass" tab bar + separate Add button. */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-border bg-background/85 backdrop-blur-xl md:hidden"
-        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 6px)" }}
+        aria-label="Main"
+        className="fixed inset-x-0 bottom-0 z-20 flex items-end gap-3 px-4 md:hidden"
+        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
       >
-        {TABS.map(({ href, label, icon: Icon }) => {
-          const active = isActive(pathname, href);
-          const add = href === "/transactions/new";
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex flex-col items-center gap-0.5 pt-2 text-[10px] font-medium",
-                add || active ? "text-primary" : "text-muted-foreground",
-              )}
-            >
-              <Icon className={add ? "size-7" : "size-6"} strokeWidth={active || add ? 2.3 : 1.8} />
-              {!add && label}
-            </Link>
-          );
-        })}
+        <div className="glass flex h-[62px] flex-1 items-center justify-around rounded-full px-1.5">
+          {TABS.filter((t) => t.href !== "/transactions/new").map(({ href, label, icon: Icon }) => {
+            const active = isActive(pathname, href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex h-[52px] flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-semibold transition-colors",
+                  active ? "glass-active text-primary" : "text-foreground/75",
+                )}
+              >
+                <Icon className="size-[22px]" strokeWidth={active ? 2.4 : 1.9} />
+                {label}
+              </Link>
+            );
+          })}
+        </div>
+        <Link
+          href="/transactions/new"
+          aria-label="New transaction"
+          className={cn(
+            "glass glass-tinted flex size-[62px] shrink-0 items-center justify-center rounded-full text-primary-foreground",
+            pathname === "/transactions/new" && "ring-2 ring-primary/40",
+          )}
+        >
+          <Plus className="size-7" strokeWidth={2.6} />
+        </Link>
       </nav>
     </div>
   );
