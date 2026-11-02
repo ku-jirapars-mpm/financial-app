@@ -5,6 +5,7 @@ import { bangkokDate, monthStart } from "../dates";
 import type { AccountKind } from "../domain";
 import { calculateSnapshot, type SnapshotValues } from "../snapshot-calc";
 import { NotFoundError, UserFacingError } from "./errors";
+import { lentOutstandingAsOf } from "./receivables";
 
 export interface SnapshotRow extends Omit<SnapshotValues, "assumptions" | "metadata"> {
   id: string;
@@ -73,6 +74,7 @@ export async function computeSnapshot(db: Db, snapshotDate: string, today = bang
     })),
     flows: flows.map((f) => ({ accountKind: f.kind, type: f.type, amountSatang: f.amount_satang })),
     remainingInstallmentsSatang: Math.max(0, inst[0]?.remaining ?? 0),
+    receivablesSatang: await lentOutstandingAsOf(db, snapshotDate),
   });
 }
 

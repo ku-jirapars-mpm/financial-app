@@ -8,6 +8,8 @@ import {
   CreditCard,
   Gift,
   GraduationCap,
+  HandCoins,
+  Hammer,
   HeartPulse,
   Home,
   Landmark,
@@ -56,6 +58,8 @@ const BY_TYPE: Partial<Record<TransactionType, [LucideIcon, string]>> = {
   fee: [Receipt, "#8e8e93"],
   interest: [Percent, "#8e8e93"],
   refund: [RotateCcw, "#34c759"],
+  lend: [HandCoins, "#ff9f0a"],
+  collect: [HandCoins, "#34c759"],
   income: [CircleDollarSign, "#34c759"],
   expense: [Receipt, "#ff9500"],
 };
@@ -97,4 +101,16 @@ export function AccountIcon({ kind }: { kind: AccountKind }) {
 
 export function SubscriptionIcon() {
   return <Bubble Icon={Repeat} color="#e50914" />;
+}
+
+const BY_RECEIVABLE: Record<"work" | "loan" | "reimbursement" | "other", [LucideIcon, string]> = {
+  work: [Hammer, "#0a84ff"],
+  loan: [HandCoins, "#ff9f0a"],
+  reimbursement: [RotateCcw, "#34c759"],
+  other: [CircleDollarSign, "#8e8e93"],
+};
+
+export function ReceivableIcon({ kind }: { kind: "work" | "loan" | "reimbursement" | "other" }) {
+  const [Icon, color] = BY_RECEIVABLE[kind];
+  return <Bubble Icon={Icon} color={color} />;
 }

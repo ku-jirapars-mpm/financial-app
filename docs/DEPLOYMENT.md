@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | Neon project | `myfinance` (id `red-firefly-59886881`), region AWS ap-southeast-1 (Singapore), Postgres 17 |
-| Branch | `main` (production). Migrations `0001`–`0005` applied 2026-10-30 and verified (RLS forced on 15 tables, app role without BYPASSRLS, delete guards active). |
+| Branch | `main` (production). Migrations `0001`–`0006` applied (latest 2026-11-02) and verified (RLS forced on 15 tables, app role without BYPASSRLS, delete guards active). |
 | Connection strings | Neon console → project `myfinance` → **Connect**. Never commit them. |
 
 ## 1. Create the Neon database (only for a new environment)

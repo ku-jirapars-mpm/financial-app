@@ -5,7 +5,7 @@ import { LIQUID_KINDS, type AccountKind } from "./domain";
  * Bump CALCULATION_VERSION whenever the formulas below change; stored
  * snapshots keep the version they were computed with.
  */
-export const CALCULATION_VERSION = "2026.10.1";
+export const CALCULATION_VERSION = "2026.11.1";
 
 export const SNAPSHOT_ASSUMPTIONS = {
   currency: "THB; all amounts are integer satang",
@@ -22,6 +22,8 @@ export const SNAPSHOT_ASSUMPTIONS = {
   net_cash_flow: "net change of cash, e-wallet and bank balances from transactions dated in the month",
   net_financial_position: "sum of all account balances minus remaining installment obligations",
   excluded: "accounts whose opening balance date is after the snapshot date",
+  receivables:
+    "money owed to you that you already paid out (loans, reimbursements, other) is included in other assets and net position; unpaid work is not counted until received",
 } as const;
 
 export interface SnapshotAccountInput {
@@ -47,6 +49,8 @@ export interface SnapshotInputs {
   /** Posted, non-deleted transactions dated within [periodStart, snapshotDate]. */
   flows: SnapshotFlowInput[];
   remainingInstallmentsSatang: number;
+  /** Outstanding money owed to the user for loans/reimbursements/other (not unpaid work). */
+  receivablesSatang?: number;
 }
 
 export interface SnapshotValues {
@@ -131,6 +135,9 @@ export function calculateSnapshot(input: SnapshotInputs): SnapshotValues {
     if (LIQUID_KINDS.includes(f.accountKind)) netCashFlow += f.amountSatang;
   }
 
+  const receivables = input.receivablesSatang ?? 0;
+  otherAssets += receivables;
+  net += receivables;
   const installments = input.remainingInstallmentsSatang;
   const warnings: string[] = [];
   const reconstructed = input.snapshotDate < input.today;

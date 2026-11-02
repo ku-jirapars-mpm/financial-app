@@ -34,6 +34,8 @@ export const TRANSACTION_TYPES = [
   "fee",
   "interest",
   "refund",
+  "lend",
+  "collect",
 ] as const;
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 
@@ -46,6 +48,26 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   fee: "Fee",
   interest: "Interest",
   refund: "Refund",
+  lend: "Lent",
+  collect: "Money returned",
+};
+
+export const RECEIVABLE_KINDS = ["work", "loan", "reimbursement", "other"] as const;
+export type ReceivableKind = (typeof RECEIVABLE_KINDS)[number];
+
+export const RECEIVABLE_KIND_LABELS: Record<ReceivableKind, string> = {
+  work: "Unpaid work",
+  loan: "Lent money",
+  reimbursement: "Reimbursement",
+  other: "Other",
+};
+
+/** How a payment received for each kind of receivable is recorded. */
+export const RECEIVABLE_PAYMENT_TYPE: Record<ReceivableKind, "income" | "collect" | "refund"> = {
+  work: "income",
+  loan: "collect",
+  reimbursement: "refund",
+  other: "collect",
 };
 
 /** Sign a positive magnitude according to how the type affects the account balance. */

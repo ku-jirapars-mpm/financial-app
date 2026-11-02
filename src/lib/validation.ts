@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { bahtToSatang } from "./money";
 import { isIsoDate } from "./dates";
-import { ACCOUNT_KINDS, TRANSACTION_TYPES } from "./domain";
+import { ACCOUNT_KINDS, RECEIVABLE_KINDS, TRANSACTION_TYPES } from "./domain";
 
 const trimmed = (max: number) => z.string().trim().max(max);
 const optionalText = (max: number) =>
@@ -189,3 +189,42 @@ export const cardDetailsSchema = z.object({
 });
 
 export const cardDetailsUpdateSchema = cardDetailsSchema.extend({ accountId: uuid });
+
+export const receivableCreateSchema = z
+  .object({
+    kind: z.enum(RECEIVABLE_KINDS),
+    person: trimmed(100).min(1, "Who owes you?"),
+    description: trimmed(200).default(""),
+    amount: positiveBaht,
+    issuedDate: isoDate,
+    dueDate: optionalDate,
+    notes: optionalText(2000),
+    fromAccountId: optionalUuid,
+    idempotencyKey: z.string().min(8).max(100),
+  })
+  .refine((r) => !r.dueDate || r.dueDate >= r.issuedDate, { message: "Due date can't be before the start date", path: ["dueDate"] });
+
+export const receivableUpdateSchema = z.object({
+  id: uuid,
+  expectedVersion: z.coerce.number().int().positive(),
+  person: trimmed(100).min(1),
+  description: trimmed(200).default(""),
+  amount: positiveBaht,
+  dueDate: optionalDate,
+  notes: optionalText(2000),
+});
+
+export const receivablePaymentSchema = z.object({
+  id: uuid,
+  amount: positiveBaht,
+  date: isoDate,
+  accountId: uuid,
+  categoryId: optionalUuid,
+  idempotencyKey: z.string().min(8).max(100),
+});
+
+export const receivableWriteOffSchema = z.object({
+  id: uuid,
+  writtenOff: z.enum(["true", "false"]).transform((v) => v === "true"),
+  reason,
+});

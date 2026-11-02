@@ -17,6 +17,7 @@ export const BACKUP_TABLES = [
   "loans",
   "credit_card_statements",
   "installment_plans",
+  "receivables",
   "recurring_transactions",
   "transactions",
   "installment_payments",
@@ -123,9 +124,10 @@ const backupSchema = z.object({
   exported_at: z.string(),
   owner_id: z.uuid(),
   notice: z.string().optional(),
-  tables: z.object(Object.fromEntries(BACKUP_TABLES.map((t) => [t, z.array(rowSchema)])) as Record<
+  // Tables added in later versions default to empty so older backups still restore.
+  tables: z.object(Object.fromEntries(BACKUP_TABLES.map((t) => [t, z.array(rowSchema).default([])])) as Record<
     BackupTable,
-    z.ZodArray<typeof rowSchema>
+    z.ZodDefault<z.ZodArray<typeof rowSchema>>
   >),
   integrity: z.object({
     algorithm: z.literal("sha256"),
@@ -149,9 +151,10 @@ export function verifyBackup(input: unknown): VerifyResult {
   }
   const b = parsed.data as unknown as Backup;
   const errors: string[] = [];
-  if (backupChecksum(b) !== b.integrity.checksum) errors.push("Checksum mismatch: the file was modified or corrupted.");
+  // Checksum over the file exactly as written (before defaults were filled in).
+  if (backupChecksum(input as Backup) !== b.integrity.checksum) errors.push("Checksum mismatch: the file was modified or corrupted.");
   for (const t of BACKUP_TABLES) {
-    if (b.integrity.row_counts[t] !== b.tables[t].length) errors.push(`Row count mismatch for ${t}.`);
+    if ((b.integrity.row_counts[t] ?? 0) !== b.tables[t].length) errors.push(`Row count mismatch for ${t}.`);
     const ids = new Set(b.tables[t].map((r) => r.id));
     if (ids.size !== b.tables[t].length) errors.push(`Duplicate ids in ${t}.`);
   }
@@ -266,6 +269,7 @@ export async function restoreBackup(db: Db, backup: Backup): Promise<RestoreResu
   await insertRows(db, "loans", T.loans.map(remap));
   await insertRows(db, "credit_card_statements", T.credit_card_statements.map(remap));
   await insertRows(db, "installment_plans", T.installment_plans.map((r) => remap({ ...r, origin_transaction_id: null })));
+  await insertRows(db, "receivables", T.receivables.map(remap));
   await insertRows(db, "recurring_transactions", T.recurring_transactions.map(remap));
   await insertRows(db, "transactions", T.transactions.map(remap));
   for (const plan of T.installment_plans) {

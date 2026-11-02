@@ -14,6 +14,12 @@ import {
 } from "@/lib/server/accounts";
 import { createCategory, setCategoryArchived } from "@/lib/server/categories";
 import { saveCardDetails } from "@/lib/server/credit-cards";
+import {
+  createReceivable,
+  recordReceivablePayment,
+  setReceivableWrittenOff,
+  updateReceivable,
+} from "@/lib/server/receivables";
 import { toUserMessage } from "@/lib/server/errors";
 import { createSnapshot, rebuildSnapshot } from "@/lib/server/snapshots";
 import {
@@ -29,6 +35,10 @@ import {
   accountCreateSchema,
   cardDetailsSchema,
   cardDetailsUpdateSchema,
+  receivableCreateSchema,
+  receivablePaymentSchema,
+  receivableUpdateSchema,
+  receivableWriteOffSchema,
   accountStatusSchema,
   accountUpdateSchema,
   categoryCreateSchema,
@@ -267,4 +277,38 @@ export async function saveCardDetailsAction(_: ActionState, fd: FormData): Promi
   if (!r.ok) return r;
   revalidatePath("/", "layout");
   return { ok: true, message: "Card details saved." };
+}
+
+// ------------------------------------------------------ money owed to me
+
+export async function createReceivableAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const r = await run(receivableCreateSchema, fd, (db, i) => createReceivable(db, i), { name: "createReceivable" });
+  if (!r.ok) return r;
+  revalidatePath("/", "layout");
+  redirect(`/receivables/${(r.result as { id: string }).id}`);
+}
+
+export async function updateReceivableAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const r = await run(receivableUpdateSchema, fd, (db, i) => updateReceivable(db, i), { name: "updateReceivable" });
+  if (!r.ok) return r;
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Saved." };
+}
+
+export async function recordReceivablePaymentAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const r = await run(receivablePaymentSchema, fd, (db, i) => recordReceivablePayment(db, i), {
+    name: "recordReceivablePayment",
+  });
+  if (!r.ok) return r;
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Payment recorded." };
+}
+
+export async function setReceivableWrittenOffAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const r = await run(receivableWriteOffSchema, fd, (db, i) => setReceivableWrittenOff(db, i.id, i.writtenOff, i.reason), {
+    name: "writeOffReceivable",
+  });
+  if (!r.ok) return r;
+  revalidatePath("/", "layout");
+  return { ok: true, message: "Updated." };
 }
