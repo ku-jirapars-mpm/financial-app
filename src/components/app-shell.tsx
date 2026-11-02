@@ -18,6 +18,7 @@ import {
   Ellipsis,
   Repeat,
   HandCoins,
+  TrendingUp,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { useUiStore } from "@/lib/stores/ui";
@@ -27,6 +28,7 @@ const NAV = [
   { href: "/", label: "Overview", icon: House },
   { href: "/transactions", label: "Activity", icon: List },
   { href: "/accounts", label: "Accounts", icon: Wallet },
+  { href: "/income", label: "Recurring income", icon: TrendingUp },
   { href: "/subscriptions", label: "Subscriptions", icon: Repeat },
   { href: "/receivables", label: "Owed to me", icon: HandCoins },
   { href: "/reports", label: "Reports", icon: BarChart3 },
@@ -46,7 +48,7 @@ const TABS = [
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   if (href === "/transactions" && pathname === "/transactions/new") return false;
-  if (href === "/more") return ["/more", "/accounts", "/subscriptions", "/receivables", "/snapshots", "/categories", "/settings"].some((p) => pathname.startsWith(p));
+  if (href === "/more") return ["/more", "/accounts", "/income", "/subscriptions", "/receivables", "/snapshots", "/categories", "/settings"].some((p) => pathname.startsWith(p));
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

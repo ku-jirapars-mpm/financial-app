@@ -49,3 +49,52 @@ export function ChargeButtons({
     </div>
   );
 }
+
+/** Record an occurrence with the actual amount/date (dividends, FX card charges, a bonus month…). */
+export function RecordActualForm({
+  id,
+  dueDate,
+  amountSatang,
+  today,
+  income,
+}: {
+  id: string;
+  dueDate: string;
+  amountSatang: number;
+  today: string;
+  income: boolean;
+}) {
+  const [state, record, pending] = useActionState<ActionState, FormData>(recordSubscriptionChargeAction, { ok: true });
+  return (
+    <form action={record} className="grid gap-2 px-4 py-3">
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="dueDate" value={dueDate} />
+      <div className="grid grid-cols-2 gap-2">
+        <label className="grid gap-1 text-[12px] text-muted-foreground">
+          {income ? "Received (฿)" : "Charged (฿)"}
+          <input
+            name="amount"
+            inputMode="decimal"
+            required
+            defaultValue={satangToBahtString(amountSatang)}
+            className="h-10 rounded-lg bg-input px-3 text-[16px] text-foreground"
+          />
+        </label>
+        <label className="grid gap-1 text-[12px] text-muted-foreground">
+          On
+          <input
+            name="date"
+            type="date"
+            required
+            defaultValue={dueDate <= today ? dueDate : today}
+            className="h-10 rounded-lg bg-input px-3 text-[16px] text-foreground"
+          />
+        </label>
+      </div>
+      <button disabled={pending} className="h-10 rounded-lg bg-secondary text-[15px] font-semibold disabled:opacity-50">
+        {pending ? "Saving…" : "Record actual amount"}
+      </button>
+      {state.message && <p className={cn("text-[12px]", state.ok ? "text-positive" : "text-negative")}>{state.message}</p>}
+    </form>
+  );
+}

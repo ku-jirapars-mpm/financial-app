@@ -117,3 +117,51 @@ describeDb("subscriptions", () => {
     expect(await as(other, (db) => listSubscriptions(db, { includeCancelled: true }))).toHaveLength(0);
   });
 });
+
+describeDb("recurring income", () => {
+  let user: string;
+  let bank: string;
+
+  beforeAll(async () => {
+    user = await createUser();
+    bank = await as(user, (db) =>
+      createAccount(db, { name: "Bank", kind: "bank", institution: null, openingBalance: 0, openingBalanceDate: "2026-01-01", notes: null }),
+    );
+  });
+
+  it("records salary as income into the bank and keeps it separate from subscriptions", async () => {
+    const salaryCat = (await as(user, (db) => db.query("select id from categories where name = 'Salary'"))).rows[0].id;
+    const salary = await as(user, (db) =>
+      createSubscription(db, {
+        type: "income", name: "Salary", counterparty: "Acme", amount: 4_500_000, accountId: bank, categoryId: salaryCat,
+        frequency: "monthly", intervalCount: 1, nextDate: "2026-01-25",
+      }),
+    );
+    const r = await as(user, (db) => recordSubscriptionCharge(db, { id: salary, dueDate: "2026-01-25", amount: 4_500_000, date: "2026-01-25" }));
+    expect(r.created).toBe(true);
+    expect((await as(user, (db) => getAccount(db, bank))).balance_satang).toBe(4_500_000);
+    const s = await as(user, (db) => getSubscription(db, salary));
+    expect(s).toMatchObject({ type: "income", next_occurrence_date: "2026-02-25", category_name: "Salary" });
+
+    expect(await as(user, (db) => listSubscriptions(db, { type: "income" }))).toHaveLength(1);
+    expect(await as(user, (db) => listSubscriptions(db))).toHaveLength(0); // subscriptions list = expenses only
+    const tx = (await as(user, (db) => db.query("select type, amount_satang from transactions where recurring_transaction_id = $1", [salary]))).rows[0];
+    expect(tx).toEqual({ type: "income", amount_satang: 4_500_000 });
+  });
+
+  it("records a dividend with the actual (different) amount and date", async () => {
+    const div = await as(user, (db) =>
+      createSubscription(db, {
+        type: "income", name: "PTT dividend", counterparty: null, amount: 120_000, accountId: bank, categoryId: null,
+        frequency: "monthly", intervalCount: 6, nextDate: "2026-04-20",
+      }),
+    );
+    await as(user, (db) => recordSubscriptionCharge(db, { id: div, dueDate: "2026-04-20", amount: 133_750, date: "2026-04-22" }));
+    const s = await as(user, (db) => getSubscription(db, div));
+    expect(s.next_occurrence_date).toBe("2026-10-20");
+    expect((await as(user, (db) => subscriptionPayments(db, div)))[0]).toMatchObject({ amount_satang: 133_750, transaction_date: "2026-04-22" });
+    expect(s.category_name).toBeNull(); // income doesn't get the Subscriptions category
+    // Both kinds appear in "due" (Overview Upcoming).
+    expect((await as(user, (db) => dueSubscriptions(db, "2026-10-31"))).map((x) => x.type).sort()).toEqual(["income", "income"]);
+  });
+});

@@ -98,7 +98,7 @@ export default async function Overview() {
       </Section>
 
       {(upcoming.length > 0 || cardsDue.length > 0) && (
-        <Section title="Upcoming" action={<Link href="/subscriptions">Subscriptions</Link>}>
+        <Section title="Upcoming">
           {cardsDue.map((c) => {
             const overdue = c.daysUntilDue < 0;
             return (
@@ -125,20 +125,23 @@ export default async function Overview() {
           })}
           {upcoming.map((s) => {
             const due = s.next_occurrence_date! <= today;
+            const income = s.type === "income";
+            const amount = <Money satang={income ? s.amount_satang : -s.amount_satang} signed />;
             return (
               <Row
                 key={s.id}
-                leading={<TransactionIcon type="expense" category={s.name} />}
-                title={<Link href={`/subscriptions/${s.id}`}>{s.name}</Link>}
-                subtitle={<span className={due ? "text-negative" : undefined}>{dueLabel(s.next_occurrence_date!, today)}</span>}
-                trailing={
-                  due ? (
-                    <ChargeButtons id={s.id} dueDate={s.next_occurrence_date!} amountSatang={s.amount_satang} />
-                  ) : (
-                    <Money satang={s.amount_satang} />
-                  )
+                leading={<TransactionIcon type={s.type} category={s.category_name ?? s.name} />}
+                title={<Link href={`${income ? "/income" : "/subscriptions"}/${s.id}`}>{s.name}</Link>}
+                subtitle={
+                  <span className={due && !income ? "text-negative" : undefined}>
+                    {income ? "Expected " : ""}
+                    {dueLabel(s.next_occurrence_date!, today).toLowerCase()}
+                  </span>
                 }
-                trailingSub={due ? <Money satang={s.amount_satang} /> : s.account_name}
+                trailing={
+                  due ? <ChargeButtons id={s.id} dueDate={s.next_occurrence_date!} amountSatang={s.amount_satang} /> : amount
+                }
+                trailingSub={due ? amount : s.account_name}
               />
             );
           })}
@@ -169,6 +172,7 @@ export default async function Overview() {
         ))}
       </Section>
 
+      {owed.lentOutstandingSatang + owed.workOutstandingSatang > 0 && (
       <Section>
         <Row
           href="/receivables"
@@ -188,6 +192,7 @@ export default async function Overview() {
           trailing={<Money satang={owed.lentOutstandingSatang + owed.workOutstandingSatang} />}
         />
       </Section>
+      )}
 
       <div className="grid gap-1.5">
         <div className="flex items-end justify-between px-4">

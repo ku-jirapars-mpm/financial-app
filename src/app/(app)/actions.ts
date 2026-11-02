@@ -231,7 +231,7 @@ export async function createSubscriptionAction(_: ActionState, fd: FormData): Pr
   const r = await run(subscriptionSchema, fd, (db, i) => createSubscription(db, i), { name: "createSubscription" });
   if (!r.ok) return r;
   revalidatePath("/", "layout");
-  redirect("/subscriptions");
+  redirect(fd.get("type") === "income" ? "/income" : "/subscriptions");
 }
 
 export async function updateSubscriptionAction(_: ActionState, fd: FormData): Promise<ActionState> {

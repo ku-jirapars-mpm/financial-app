@@ -17,7 +17,10 @@ export interface SubscriptionFormValues {
   nextDate: string;
 }
 
-const PRESETS = ["Netflix", "Spotify", "YouTube Premium", "iCloud+", "Disney+", "ChatGPT", "Apple Music", "LINE MAN"];
+const PRESETS = {
+  expense: ["Netflix", "Spotify", "YouTube Premium", "iCloud+", "Disney+", "ChatGPT", "Apple Music", "LINE MAN"],
+  income: ["Salary", "Dividend", "Savings interest", "Bond coupon", "Rent received", "Freelance retainer", "Pension"],
+};
 
 export function SubscriptionForm({
   action,
@@ -25,7 +28,9 @@ export function SubscriptionForm({
   accounts,
   categories,
   submitLabel,
+  mode = "expense",
 }: {
+  mode?: "expense" | "income";
   action: (prev: ActionState, fd: FormData) => Promise<ActionState>;
   values: SubscriptionFormValues;
   accounts: { id: string; name: string }[];
@@ -37,22 +42,23 @@ export function SubscriptionForm({
       {(s) => (
         <>
           {values.id && <input type="hidden" name="id" value={values.id} />}
+          <input type="hidden" name="type" value={mode} />
           <FormGroup>
             <FormRow label="Name" htmlFor="name" error={s.fieldErrors?.name}>
-              <Input id="name" name="name" required maxLength={200} defaultValue={values.name} placeholder="Netflix" list="subscription-presets" className={bareControl} />
+              <Input id="name" name="name" required maxLength={200} defaultValue={values.name} placeholder={mode === "income" ? "Salary" : "Netflix"} list="subscription-presets" className={bareControl} />
               <datalist id="subscription-presets">
-                {PRESETS.map((p) => (
+                {PRESETS[mode].map((p) => (
                   <option key={p} value={p} />
                 ))}
               </datalist>
             </FormRow>
-            <FormRow label="Price (฿)" htmlFor="amount" error={s.fieldErrors?.amount}>
+            <FormRow label={mode === "income" ? "Amount (฿)" : "Price (฿)"} htmlFor="amount" error={s.fieldErrors?.amount}>
               <Input
                 id="amount"
                 name="amount"
                 inputMode="decimal"
                 required
-                placeholder="419.00"
+                placeholder={mode === "income" ? "45,000.00" : "419.00"}
                 defaultValue={values.amountSatang ? satangToBahtString(values.amountSatang) : ""}
                 className={bareControl}
               />
@@ -73,12 +79,12 @@ export function SubscriptionForm({
                 </Select>
               </div>
             </FormRow>
-            <FormRow label="Next charge" htmlFor="nextDate" error={s.fieldErrors?.nextDate}>
+            <FormRow label={mode === "income" ? "Next payday" : "Next charge"} htmlFor="nextDate" error={s.fieldErrors?.nextDate}>
               <Input id="nextDate" name="nextDate" type="date" required defaultValue={values.nextDate} className={bareControl} />
             </FormRow>
           </FormGroup>
-          <FormGroup footer="Category defaults to “Subscriptions”.">
-            <FormRow label="Paid with" htmlFor="accountId" error={s.fieldErrors?.accountId}>
+          <FormGroup footer={mode === "income" ? "Use your average if the amount varies — you can record the actual amount each time." : "Category defaults to “Subscriptions”."}>
+            <FormRow label={mode === "income" ? "Paid into" : "Paid with"} htmlFor="accountId" error={s.fieldErrors?.accountId}>
               <Select id="accountId" name="accountId" defaultValue={values.accountId} className={bareControl} dir="rtl">
                 {accounts.map((a) => (
                   <option key={a.id} value={a.id}>{a.name}</option>
@@ -87,16 +93,16 @@ export function SubscriptionForm({
             </FormRow>
             <FormRow label="Category" htmlFor="categoryId">
               <Select id="categoryId" name="categoryId" defaultValue={values.categoryId ?? ""} className={bareControl} dir="rtl">
-                <option value="">Subscriptions</option>
+                <option value="">{mode === "income" ? "None" : "Subscriptions"}</option>
                 {categories
-                  .filter((c) => c.name.toLowerCase() !== "subscriptions")
+                  .filter((c) => mode === "income" || c.name.toLowerCase() !== "subscriptions")
                   .map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
               </Select>
             </FormRow>
-            <FormRow label="Merchant" htmlFor="counterparty">
-              <Input id="counterparty" name="counterparty" maxLength={100} defaultValue={values.counterparty ?? ""} placeholder="Optional" className={bareControl} />
+            <FormRow label={mode === "income" ? "From" : "Merchant"} htmlFor="counterparty">
+              <Input id="counterparty" name="counterparty" maxLength={100} defaultValue={values.counterparty ?? ""} placeholder={mode === "income" ? "Employer, broker…" : "Optional"} className={bareControl} />
             </FormRow>
           </FormGroup>
         </>

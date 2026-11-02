@@ -162,6 +162,7 @@ export const periodSchema = z
   .refine((p) => p.from <= p.to, "Start must be on or before end");
 
 export const subscriptionSchema = z.object({
+  type: z.enum(["expense", "income"]).default("expense"),
   name: trimmed(200).min(1, "Name is required"),
   counterparty: optionalText(100),
   amount: positiveBaht,

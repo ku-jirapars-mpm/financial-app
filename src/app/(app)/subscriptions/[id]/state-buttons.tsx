@@ -3,7 +3,7 @@ import { useActionState } from "react";
 import type { ActionState } from "@/lib/action-state";
 import { setSubscriptionStateAction } from "../../actions";
 
-export function StateButtons({ id, active, cancelled }: { id: string; active: boolean; cancelled: boolean }) {
+export function StateButtons({ id, active, cancelled, income = false }: { id: string; active: boolean; cancelled: boolean; income?: boolean }) {
   const [state, act, pending] = useActionState<ActionState, FormData>(setSubscriptionStateAction, { ok: true });
   const button = (value: "active" | "paused" | "cancelled", label: string, tone: string, confirm?: string) => (
     <form
@@ -22,9 +22,14 @@ export function StateButtons({ id, active, cancelled }: { id: string; active: bo
   return (
     <div className="grid gap-1.5">
       <div className="divide-y divide-border overflow-hidden rounded-2xl bg-card">
-        {active ? button("paused", "Pause", "text-primary") : button("active", cancelled ? "Restart subscription" : "Resume", "text-primary")}
+        {active ? button("paused", "Pause", "text-primary") : button("active", cancelled ? (income ? "Restart" : "Restart subscription") : "Resume", "text-primary")}
         {!cancelled &&
-          button("cancelled", "Cancel subscription", "text-destructive", "Cancel this subscription? Its payment history is kept.")}
+          button(
+            "cancelled",
+            income ? "Stop (no longer receiving)" : "Cancel subscription",
+            "text-destructive",
+            income ? "Mark this income as stopped? Its history is kept." : "Cancel this subscription? Its payment history is kept.",
+          )}
       </div>
       {!state.ok && state.message && <p className="px-4 text-[12px] text-negative">{state.message}</p>}
     </div>

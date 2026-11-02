@@ -86,6 +86,9 @@ function Bubble({ Icon, color, className }: { Icon: LucideIcon; color: string; c
 }
 
 export function TransactionIcon({ type, category }: { type: TransactionType; category: string | null }) {
+  if (type === "income" && category && /interest|dividend|coupon|ดอกเบี้ย|ปันผล/i.test(category)) {
+    return <Bubble Icon={Percent} color="#34c759" />;
+  }
   if (category && (type === "income" || type === "expense" || type === "refund")) {
     const match = BY_CATEGORY.find(([re]) => re.test(category));
     if (match) return <Bubble Icon={match[1]} color={match[2]} />;

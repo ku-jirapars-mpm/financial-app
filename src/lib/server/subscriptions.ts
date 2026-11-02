@@ -5,13 +5,18 @@ import type { AccountKind } from "../domain";
 import { ConcurrencyError, NotFoundError, UserFacingError } from "./errors";
 
 /**
- * Subscriptions are recurring *expenses* stored in recurring_transactions.
- * Charges are never posted automatically: the user confirms each one (prices
- * and card FX vary), which posts a normal expense transaction linked back to
- * the subscription and moves the schedule to the next date.
+ * Recurring money stored in recurring_transactions:
+ *   - type "expense": subscriptions (Netflix, iCloud…)
+ *   - type "income": recurring income (salary, dividends, interest, rent received…)
+ * Nothing is posted automatically: the user confirms each occurrence (prices,
+ * FX and dividend amounts vary), which posts a normal expense/income
+ * transaction linked back to the schedule and moves it to the next date.
  */
+export type RecurringType = "expense" | "income";
+
 export interface SubscriptionRow {
   id: string;
+  type: RecurringType;
   name: string;
   counterparty: string | null;
   amount_satang: number;
@@ -31,6 +36,7 @@ export interface SubscriptionRow {
 }
 
 export interface SubscriptionInput {
+  type?: RecurringType;
   name: string;
   counterparty: string | null;
   amount: number;
@@ -42,7 +48,7 @@ export interface SubscriptionInput {
 }
 
 const SELECT = `
-  select r.id, r.description as name, r.counterparty, r.amount_satang, r.frequency, r.interval_count,
+  select r.id, r.type, r.description as name, r.counterparty, r.amount_satang, r.frequency, r.interval_count,
          r.start_date, r.next_occurrence_date, r.end_date, r.is_active, r.account_id,
          a.name as account_name, a.kind as account_kind, r.category_id, c.name as category_name,
          (select max(t.transaction_date) from transactions t
@@ -51,7 +57,7 @@ const SELECT = `
   from recurring_transactions r
   join accounts a on a.id = r.account_id
   left join categories c on c.id = r.category_id
-  where r.type = 'expense'`;
+  where r.type in ('expense', 'income')`;
 
 /** Average cost per month in satang (rounded), for totals. */
 export function monthlyEquivalent(amount: number, frequency: Frequency, interval: number): number {
@@ -59,10 +65,14 @@ export function monthlyEquivalent(amount: number, frequency: Frequency, interval
   return Math.round((amount * perYear) / 12);
 }
 
-export async function listSubscriptions(db: Db, opts: { includeCancelled?: boolean } = {}): Promise<SubscriptionRow[]> {
+export async function listSubscriptions(
+  db: Db,
+  opts: { includeCancelled?: boolean; type?: RecurringType } = {},
+): Promise<SubscriptionRow[]> {
   const { rows } = await db.query<SubscriptionRow>(
-    `${SELECT} ${opts.includeCancelled ? "" : "and r.is_active"}
+    `${SELECT} and r.type = $1 ${opts.includeCancelled ? "" : "and r.is_active"}
      order by r.is_active desc, r.next_occurrence_date nulls last, lower(r.description)`,
+    [opts.type ?? "expense"],
   );
   return rows;
 }
@@ -73,7 +83,7 @@ export async function getSubscription(db: Db, id: string): Promise<SubscriptionR
   return rows[0];
 }
 
-/** Active subscriptions charged on or before `until` (includes overdue ones). */
+/** Active recurring items (both kinds) due on or before `until`, including overdue ones. */
 export async function dueSubscriptions(db: Db, until: string): Promise<SubscriptionRow[]> {
   const { rows } = await db.query<SubscriptionRow>(
     `${SELECT} and r.is_active and r.next_occurrence_date <= $1 order by r.next_occurrence_date, lower(r.description)`,
@@ -82,9 +92,9 @@ export async function dueSubscriptions(db: Db, until: string): Promise<Subscript
   return rows;
 }
 
-/** Uses the chosen category, or a "Subscriptions" expense category (created on first use). */
-async function resolveCategory(db: Db, categoryId: string | null): Promise<string> {
-  if (categoryId) return categoryId;
+/** Uses the chosen category; subscriptions default to a "Subscriptions" category (created on first use). */
+async function resolveCategory(db: Db, categoryId: string | null, type: RecurringType): Promise<string | null> {
+  if (categoryId || type === "income") return categoryId;
   const { rows } = await db.query<{ id: string }>(
     `with existing as (
        select id from categories where kind = 'expense' and lower(name) = 'subscriptions'
@@ -98,13 +108,14 @@ async function resolveCategory(db: Db, categoryId: string | null): Promise<strin
 }
 
 export async function createSubscription(db: Db, input: SubscriptionInput): Promise<string> {
-  const categoryId = await resolveCategory(db, input.categoryId);
+  const type = input.type ?? "expense";
+  const categoryId = await resolveCategory(db, input.categoryId, type);
   const { rows } = await db.query<{ id: string }>(
     `insert into recurring_transactions
        (account_id, category_id, type, amount_satang, description, counterparty, frequency, interval_count,
         start_date, next_occurrence_date)
-     values ($1, $2, 'expense', $3, $4, $5, $6, $7, $8, $8) returning id`,
-    [input.accountId, categoryId, input.amount, input.name, input.counterparty, input.frequency, input.intervalCount, input.nextDate],
+     values ($1, $2, $9, $3, $4, $5, $6, $7, $8, $8) returning id`,
+    [input.accountId, categoryId, input.amount, input.name, input.counterparty, input.frequency, input.intervalCount, input.nextDate, type],
   );
   return rows[0]!.id;
 }
@@ -113,7 +124,7 @@ export async function createSubscription(db: Db, input: SubscriptionInput): Prom
 export async function updateSubscription(db: Db, id: string, input: SubscriptionInput): Promise<void> {
   await setChangeReason(db, "subscription edited");
   const current = await getSubscription(db, id);
-  const categoryId = await resolveCategory(db, input.categoryId);
+  const categoryId = await resolveCategory(db, input.categoryId, current.type);
   const reanchor = input.nextDate !== current.next_occurrence_date || input.frequency !== current.frequency
     || input.intervalCount !== current.interval_count;
   await db.query(
@@ -131,7 +142,7 @@ async function lockActive(db: Db, id: string, expectedDate: string, idempotencyK
   const { rows } = await db.query<{ is_active: boolean; next_occurrence_date: string | null; start_date: string;
     frequency: Frequency; interval_count: number; end_date: string | null }>(
     `select is_active, next_occurrence_date, start_date, frequency, interval_count, end_date
-     from recurring_transactions where id = $1 and type = 'expense' for update`,
+     from recurring_transactions where id = $1 and type in ('expense', 'income') for update`,
     [id],
   );
   const r = rows[0];
@@ -173,10 +184,11 @@ export async function recordSubscriptionCharge(
     `insert into transactions
        (account_id, category_id, type, amount_satang, transaction_date, description, counterparty,
         recurring_transaction_id, idempotency_key)
-     values ($1, $2, 'expense', $3, $4, $5, $6, $7, $8)
+     values ($1, $2, $9, $3, $4, $5, $6, $7, $8)
      on conflict (owner_id, idempotency_key) where idempotency_key is not null do nothing
      returning id`,
-    [sub.account_id, sub.category_id, -input.amount, input.date, sub.name, sub.counterparty, input.id, key],
+    [sub.account_id, sub.category_id, sub.type === "income" ? input.amount : -input.amount, input.date, sub.name,
+     sub.counterparty, input.id, key, sub.type],
   );
   if (!rows[0]) {
     const again = await db.query<{ id: string }>("select id from transactions where idempotency_key = $1", [key]);
@@ -202,7 +214,7 @@ export async function setSubscriptionState(
 ): Promise<void> {
   await setChangeReason(db, `subscription ${state}`);
   const { rows } = await db.query<{ start_date: string; frequency: Frequency; interval_count: number; next_occurrence_date: string | null }>(
-    "select start_date, frequency, interval_count, next_occurrence_date from recurring_transactions where id = $1 and type = 'expense' for update",
+    "select start_date, frequency, interval_count, next_occurrence_date from recurring_transactions where id = $1 and type in ('expense', 'income') for update",
     [id],
   );
   const r = rows[0];
