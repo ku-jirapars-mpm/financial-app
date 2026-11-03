@@ -24,10 +24,25 @@ test("credit card shows limit, used, statement day and due day", async ({ page }
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("heading", { name: "Activity" })).toBeVisible();
 
+  // Default view: credit still available.
   await page.goto("/");
-  await expect(page.getByText("25% of ฿50,000.00")).toBeVisible();
+  const card = page.getByRole("link", { name: /KTC Visa/ }).first();
+  await expect(card).toContainText("฿37,500.00");
+  await expect(card).toContainText("left of ฿50,000");
+  await expect(page.locator("header")).toContainText("Credit left ฿37,500.00");
+
+  // Switch to what's owed; the choice is remembered.
+  await page.getByRole("radio", { name: "Owed" }).click();
+  await expect(card).toContainText("฿12,500.00");
+  await expect(card).toContainText("25% of ฿50,000 used");
+  await expect(page.locator("header")).toContainText("Debt ฿12,500.00");
+  await page.reload();
+  await expect(page.getByRole("link", { name: /KTC Visa/ }).first()).toContainText("25% of ฿50,000 used");
+  await page.getByRole("radio", { name: "Available" }).click();
   await page.getByRole("link", { name: /KTC Visa/ }).first().click();
-  await expect(page.getByText("฿37,500.00")).toBeVisible(); // available
+  await expect(page.getByRole("heading", { name: "KTC Visa" })).toBeVisible();
+  await expect(page.getByText("Available · คงเหลือ")).toBeVisible();
+  await expect(page.getByText("฿37,500.00")).toBeVisible();
   await page.getByRole("link", { name: "Pay card" }).click();
   await expect(page.getByRole("button", { name: "Pay debt" })).toBeVisible();
 });

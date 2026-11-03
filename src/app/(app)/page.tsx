@@ -12,9 +12,9 @@ import { requireUser } from "@/lib/session";
 import { listAccounts } from "@/lib/server/accounts";
 import { monthlyFlows } from "@/lib/server/reports";
 import { dueSubscriptions } from "@/lib/server/subscriptions";
-import { allCardStatuses, type CardStatus } from "@/lib/server/credit-cards";
+import { allCardStatuses } from "@/lib/server/credit-cards";
 import { receivableTotals } from "@/lib/server/receivables";
-import { usageTone } from "@/components/card-summary";
+import { CardAmount, CardUsageLine, CardViewToggle, DebtOrCredit } from "@/components/card-view";
 import { satangToBahtString } from "@/lib/money";
 import { listTransactions } from "@/lib/server/transactions";
 import { ReceivableIcon, TransactionIcon } from "@/components/category-icon";
@@ -51,6 +51,7 @@ export default async function Overview() {
   // Money already paid out to others (loans etc.) is still yours; unpaid work counts once received.
   const net = assets - debt + owed.lentOutstandingSatang;
   const cardByAccount = new Map(cards.map((c) => [c.details.account_id, c]));
+  const creditLeft = cards.reduce((sum, c) => sum + c.availableSatang, 0);
   // Card bills due within a week (or overdue) that still have an amount to pay.
   const cardsDue = cards.filter((c) => (c.dueSatang ?? 0) > 0 && c.daysUntilDue <= 7);
   const spentShare = month.income_satang > 0 ? Math.min(1, month.expenses_satang / month.income_satang) : month.expenses_satang > 0 ? 1 : 0;
@@ -67,9 +68,7 @@ export default async function Overview() {
           <span>
             Assets <Money satang={assets} className="text-foreground" />
           </span>
-          <span>
-            Debt <Money satang={debt} className="text-foreground" />
-          </span>
+          <DebtOrCredit debtSatang={debt} creditLeftSatang={cards.length ? creditLeft : null} />
           {owed.lentOutstandingSatang > 0 && (
             <span>
               Owed <Money satang={owed.lentOutstandingSatang} className="text-foreground" />
@@ -148,7 +147,15 @@ export default async function Overview() {
         </Section>
       )}
 
-      <Section title="Accounts" action={<Link href="/accounts">See all</Link>}>
+      <Section
+        title="Accounts"
+        action={
+          <span className="flex items-center gap-3">
+            {cards.length > 0 && <CardViewToggle />}
+            <Link href="/accounts">See all</Link>
+          </span>
+        }
+      >
         {accounts.map((a) => (
           <Row
             key={a.id}
@@ -157,16 +164,26 @@ export default async function Overview() {
             title={a.name}
             subtitle={
               cardByAccount.has(a.id) ? (
-                <CardUsage status={cardByAccount.get(a.id)!} />
+                <CardUsageLine
+                  owedSatang={Math.max(0, -a.balance_satang)}
+                  limitSatang={cardByAccount.get(a.id)!.details.credit_limit_satang}
+                />
               ) : (
                 ACCOUNT_KIND_LABELS[a.kind]
               )
             }
             trailing={
-              <Money
-                satang={isLiability(a.kind) ? -a.balance_satang : a.balance_satang}
-                className={isLiability(a.kind) && a.balance_satang < 0 ? "text-negative" : undefined}
-              />
+              a.kind === "credit_card" ? (
+                <CardAmount
+                  owedSatang={-a.balance_satang}
+                  limitSatang={cardByAccount.get(a.id)?.details.credit_limit_satang ?? null}
+                />
+              ) : (
+                <Money
+                  satang={isLiability(a.kind) ? -a.balance_satang : a.balance_satang}
+                  className={isLiability(a.kind) && a.balance_satang < 0 ? "text-negative" : undefined}
+                />
+              )
             }
           />
         ))}
@@ -213,21 +230,5 @@ function Stat({ label, satang, className, signed }: { label: string; satang: num
       <span className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
       <Money satang={satang} signed={signed} className={`whitespace-nowrap text-[15px] font-semibold ${className ?? ""}`} />
     </div>
-  );
-}
-
-function CardUsage({ status }: { status: CardStatus }) {
-  return (
-    <span className="flex items-center gap-2">
-      <span className="h-1.5 w-14 overflow-hidden rounded-full bg-muted">
-        <span
-          className={`block h-full rounded-full ${usageTone(status.usedShare)}`}
-          style={{ width: `${Math.round(status.usedShare * 100)}%` }}
-        />
-      </span>
-      <span>
-        {Math.round(status.usedShare * 100)}% of <Money satang={status.details.credit_limit_satang} />
-      </span>
-    </span>
   );
 }

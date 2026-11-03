@@ -12,14 +12,18 @@ export function Money({
   className,
   colored = false,
   signed = false,
+  whole = false,
 }: {
   satang: number;
   className?: string;
   colored?: boolean;
   signed?: boolean;
+  /** Drop ".00" for round amounts (limits, compact labels). */
+  whole?: boolean;
 }) {
   const hide = useUiStore((s) => s.hideAmounts);
-  const text = signed ? `${satang > 0 ? "+" : satang < 0 ? "−" : ""}${formatTHB(Math.abs(satang))}` : formatTHB(satang).replace(/^-/, "−");
+  const base = signed ? `${satang > 0 ? "+" : satang < 0 ? "−" : ""}${formatTHB(Math.abs(satang))}` : formatTHB(satang).replace(/^-/, "−");
+  const text = whole && satang % 100 === 0 ? base.replace(/\.00$/, "") : base;
   return (
     <span
       className={cn(
